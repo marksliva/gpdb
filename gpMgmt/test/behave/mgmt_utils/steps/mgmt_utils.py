@@ -1530,6 +1530,12 @@ ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c g
 """ % (host, source_file, user, port, dbname, table)
     run_command(context, remote_cmd.strip())
 
+@then('The user runs sql "{query}" in "{dbname}"')
+@when('The user runs sql "{query}" in "{dbname}"')
+@given('The user runs sql "{query}" in "{dbname}"')
+def impl(context, query, dbname):
+    psql_cmd = "psql -d \"%s\" -c \"%s\"; " % (dbname, query)
+    Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
 
 @then('The user runs sql "{query}" in "{dbname}" on first primary segment')
 @when('The user runs sql "{query}" in "{dbname}" on first primary segment')

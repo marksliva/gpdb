@@ -426,3 +426,17 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Name of test which found this issue: dependency_pg_type" to stdout
         Then gpcheckcat should print "Table pg_type has a dependency issue on oid .* at content 0" to stdout
         And the user runs "dropdb gpcheckcat_dependency"
+
+    @orphaned_toast
+    Scenario: gpcheckcat should report orphaned toast tables
+        Given database "gpcheckcat_orphans" is dropped and recreated
+        And the user runs sql "CREATE TABLE test (a text);" in "gpcheckcat_orphans"
+        And the user runs sql "CREATE TABLE test2 (a text);" in "gpcheckcat_orphans"
+        And the user runs sql "SET allow_system_table_mods=true; UPDATE pg_class this SET reltoastrelid=that.reltoastrelid FROM pg_class that where this.oid='test'::regclass and that.oid='test2'::regclass" in "gpcheckcat_orphans" on all the segments
+        When the user runs "gpcheckcat gpcheckcat_orphans"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print "Relation schema: pg_toast" to stdout
+        And gpcheckcat should print "Name of test which found this issue: dependency_pg_class" to stdout
+        And gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_class" to stdout
+        And gpcheckcat should print "Name of test which found this issue: foreign_key_pg_attribute" to stdout
+        And the user runs "dropdb gpcheckcat_orphans"
