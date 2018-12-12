@@ -2905,6 +2905,25 @@ def log_unique_index_violations(violations):
     logger.error('\n'.join(log_output))
 
 
+# -------------------------------------------------------------------------------
+def checkOrphanedToastTables():
+    logger.info('-----------------------------------')
+    logger.info('Performing check: checking for orphaned TOAST tables')
+    db_connection = connect2(GV.cfg[1], utilityMode=False)
+
+    checker = OrphanedToastTablesCheck()
+    check_passed = checker.runCheck(db_connection)
+
+    checkname = 'orphaned toast table(s)'
+    if check_passed:
+        logger.info('[OK]  %s' % checkname)
+    else:
+        logger.info('[FAIL]  %s' % checkname)
+        GV.checkStatus = False
+        setError(ERROR_NOREPAIR)
+        logger.error(checker.get_error_log_output())
+
+
 ############################################################################
 # Help populating repair part for all checked types
 # All functions dependent on results stored in global variable GV
