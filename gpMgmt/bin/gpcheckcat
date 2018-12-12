@@ -2925,7 +2925,7 @@ def checkOrphanedToastTables():
         #logger.error(checker.get_error_log_output())
 
     repair_statements = checker.get_repair_statements()
-    do_repair(repair_statements, issue_type="orphantoasttables", description='Repairing orphaned TOAST tables')
+    do_repair(repair_statements, issue_type="orphaned_toast_tables", description='Repairing orphaned TOAST tables')
 
 ############################################################################
 # Help populating repair part for all checked types
@@ -3049,6 +3049,14 @@ all_checks = {
             "fn": lambda: checkPartitionRegularity(),
             "version": 'main',
             "order": 13,
+            "online": True
+        },
+    "orphaned_toast_tables":
+        {
+            "description": "Check pg_class and pg_depend for orphaned TOAST tables",
+            "fn": lambda: checkOrphanedToastTables(),
+            "version": 'main',
+            "order": 14,
             "online": True
         },
 }
