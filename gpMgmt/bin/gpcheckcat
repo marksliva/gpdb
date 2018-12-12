@@ -35,6 +35,7 @@ try:
     from gpcheckcat_modules.leaked_schema_dropper import LeakedSchemaDropper
     from gpcheckcat_modules.repair import Repair
     from gpcheckcat_modules.foreign_key_check import ForeignKeyCheck
+    from gpcheckcat_modules.orphaned_toast_tables_check import OrphanedToastTablesCheck
 
 
 except ImportError, e:
@@ -2920,12 +2921,11 @@ def checkOrphanedToastTables():
     else:
         logger.info('[FAIL]  %s' % checkname)
         GV.checkStatus = False
-        setError(ERROR_NOREPAIR)
-        # TODO: Is logging needed if we do a repair?
+        setError(ERROR_REMOVE)
+        # TODO: What logging is needed, if any, when we do a repair?
         #logger.error(checker.get_error_log_output())
-
-    repair_statements = checker.get_repair_statements()
-    do_repair(repair_statements, issue_type="orphaned_toast_tables", description='Repairing orphaned TOAST tables')
+        repair_statements = checker.get_repair_statements()
+        do_repair(repair_statements, issue_type="orphaned_toast_tables", description='Repairing orphaned TOAST tables')
 
 ############################################################################
 # Help populating repair part for all checked types
@@ -3169,6 +3169,7 @@ def runAllChecks():
 
 
 def do_repair(sql_repair_contents, issue_type, description):
+    logger.info("Starting repair of %s with %d issues" % (description, len(sql_repair_contents)))
     if len(sql_repair_contents) == 0:
         return
 

@@ -19,9 +19,9 @@ class OrphanedToastTablesCheck:
         self.orphaned_toast_tables_query = """
 SELECT
     array_agg(gp_segment_id),
-    toast_table_name,
-    expected_table_name,
-    dependent_table_name
+    toast_table_oid,
+    expected_table_oid,
+    dependent_table_oid
 FROM (
     SELECT
         tst.gp_segment_id,
@@ -67,15 +67,15 @@ FROM (
             tbl.relnamespace IS NULL
             OR tbl.relnamespace != (SELECT oid FROM pg_namespace WHERE nspname = 'pg_catalog')
         )
-    ORDER BY toast_table_name, expected_table_name, dependent_table_name, gp_segment_id
+    ORDER BY toast_table_oid, expected_table_oid, dependent_table_oid, gp_segment_id
 ) AS subquery
-GROUP BY toast_table_name, expected_table_name, dependent_table_name;
+GROUP BY toast_table_oid, expected_table_oid, dependent_table_oid;
 """
 
     def runCheck(self, db_connection):
         orphaned_toast_tables = db_connection.query(self.orphaned_toast_tables_query).getresult()
         if len(orphaned_toast_tables) == 0:
-            return True, None, None, None
+            return True
 
         self.reference_orphans = [] # orphaned by missing reltoastrelid value
         self.dependency_orphans = [] # orphaned by missing pg_depend entry
@@ -87,11 +87,11 @@ GROUP BY toast_table_name, expected_table_name, dependent_table_name;
                                  toast_table_oid=toast_table_oid,
                                  expected_table_oid=expected_table_oid,
                                  dependent_table_oid=dependent_table_oid)
-            if expected_table_oid == 0 and dependent_table_oid == 0:
+            if expected_table_oid is None and dependent_table_oid is None:
                 self.double_orphans.append(orphan_row)
-            elif expected_table_oid == 0:
+            elif expected_table_oid is None:
                 self.reference_orphans.append(orphan_row)
-            elif dependent_table_oid == 0:
+            elif dependent_table_oid is None:
                 self.dependency_orphans.append(orphan_row)
             else:
                 self.mismatch_orphans.append(orphan_row)
@@ -104,24 +104,24 @@ GROUP BY toast_table_name, expected_table_name, dependent_table_name;
             # Update reltoastrelid using dependent_table_oid, since we don't have expected_table_oid
             for orphan in self.reference_orphans:
                 repair_statements.append("UPDATE pg_class SET reltoastrelid = %d WHERE oid = %s" %
-                                          (orphan.toast_table_oid, orphan.dependent_table_oid))
+                                          (orphan["toast_table_oid"], orphan["dependent_table_oid"]))
         if len(self.dependency_orphans) > 0:
             # Insert a pg_depend entry using using expected_table_oid, since we don't have dependent_table_oid
             # 1259 is the reserved oid for pg_class and 'i' means internal dependency; these are safe to hard-code
             for orphan in self.dependency_orphans:
                 repair_statements.append("INSERT INTO pg_depend VALUES (1259, %d, 0, 1259, %d, 0, 'i');" %
-                                          (orphan.toast_table_oid, orphan.expected_table_oid))
+                                          (orphan["toast_table_oid"], orphan["expected_table_oid"]))
         if len(self.mismatch_orphans) > 0:
             # Update the pg_depend entry pointing to dependent_table_oid to point to expected_table_oid again
-            for orphan in self.reference_orphans:
+            for orphan in self.mismatch_orphans:
                 repair_statements.append("UPDATE pg_depend SET refobjid = %d WHERE objid = %d AND refobjid = %d" %
-                                          (orphan.expected_table_oid, orphan.toast_table_oid, orphan.dependent_table_oid))
+                                          (orphan["expected_table_oid"], orphan["toast_table_oid"], orphan["dependent_table_oid"]))
         if len(self.double_orphans) > 0:
             # First, attempt to determine the original table's oid from the name of the TOAST table.
             # If it's a valid oid and that table exists, update its pg_class entry and add a pg_depend entry.
             # If it's invalid, the TOAST table has been renamed and there's nothing we can do.
             # If the table doesn't exist, we can safely delete the TOAST table.
-            plpsql_func = """DO $$
+            plpgsql_func = """DO $$
 DECLARE
   parent_table_oid oid := 0;
 BEGIN
@@ -142,8 +142,8 @@ BEGIN
   UPDATE pg_class SET reltoastrelid = {1} WHERE oid = parent_table_oid;
   INSERT INTO pg_depend VALUES (1259, {1}, 0, 1259, parent_table_oid, 0, 'i');
 END $$;"""
-            for orphan in self.reference_orphans:
+            for orphan in self.double_orphans:
                 # Given a TOAST table oid, get its name, extract the original table's oid from the name, and cast to oid
-                extract_oid_expr =  "trim('pg_toast.pg_toast_' from %d::regclass::text)::int::regclass::oid" % orphan.toast_table_oid
-                repair_statements.append(plpgsql_func.format(extract_oid_expr, orphan.toast_table_oid))
+                extract_oid_expr =  "trim('pg_toast.pg_toast_' from %d::regclass::text)::int::regclass::oid" % orphan["toast_table_oid"]
+                repair_statements.append(plpgsql_func.format(extract_oid_expr, orphan["toast_table_oid"]))
         return repair_statements
