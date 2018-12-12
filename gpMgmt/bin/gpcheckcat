@@ -2921,8 +2921,11 @@ def checkOrphanedToastTables():
         logger.info('[FAIL]  %s' % checkname)
         GV.checkStatus = False
         setError(ERROR_NOREPAIR)
-        logger.error(checker.get_error_log_output())
+        # TODO: Is logging needed if we do a repair?
+        #logger.error(checker.get_error_log_output())
 
+    repair_statements = checker.get_repair_statements()
+    do_repair(repair_statements, issue_type="orphantoasttables", description='Repairing orphaned TOAST tables')
 
 ############################################################################
 # Help populating repair part for all checked types
