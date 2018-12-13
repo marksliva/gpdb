@@ -103,7 +103,7 @@ GROUP BY toast_table_oid, expected_table_oid, dependent_table_oid;
         if len(self.reference_orphans) > 0:
             # Update reltoastrelid using dependent_table_oid, since we don't have expected_table_oid
             for orphan in self.reference_orphans:
-                repair_statements.append("UPDATE pg_class SET reltoastrelid = %d WHERE oid = %s" %
+                repair_statements.append("UPDATE pg_class SET reltoastrelid = %d WHERE oid = %s;" %
                                           (orphan["toast_table_oid"], orphan["dependent_table_oid"]))
         if len(self.dependency_orphans) > 0:
             # Insert a pg_depend entry using using expected_table_oid, since we don't have dependent_table_oid
@@ -114,7 +114,7 @@ GROUP BY toast_table_oid, expected_table_oid, dependent_table_oid;
         if len(self.mismatch_orphans) > 0:
             # Update the pg_depend entry pointing to dependent_table_oid to point to expected_table_oid again
             for orphan in self.mismatch_orphans:
-                repair_statements.append("UPDATE pg_depend SET refobjid = %d WHERE objid = %d AND refobjid = %d" %
+                repair_statements.append("UPDATE pg_depend SET refobjid = %d WHERE objid = %d AND refobjid = %d;" %
                                           (orphan["expected_table_oid"], orphan["toast_table_oid"], orphan["dependent_table_oid"]))
         if len(self.double_orphans) > 0:
             # First, attempt to determine the original table's oid from the name of the TOAST table.
@@ -124,26 +124,33 @@ GROUP BY toast_table_oid, expected_table_oid, dependent_table_oid;
             plpgsql_func = """DO $$
 DECLARE
   parent_table_oid oid := 0;
+  check_oid oid := 0;
+  toast_table_name text := '';
 BEGIN
   BEGIN
     SELECT oid FROM pg_class WHERE oid = {0} INTO parent_table_oid;
   EXCEPTION WHEN OTHERS THEN
     -- Invalid oid; maybe the TOAST table was renamed.  Do nothing.
-    RETURN
-  END
+    RETURN;
+  END;
 
-  IF SELECT count(oid) FROM pg_class WHERE oid = parent_table_oid = 0 THEN
+  SELECT count(oid) FROM pg_class WHERE oid = parent_table_oid INTO check_oid;
+  SELECT {1}::regclass::text INTO toast_table_name;
+  IF check_oid = 0 THEN
     -- Parent table doesn't exist.  Drop TOAST table.
-    DROP TABLE {1}::regclass::text;
+    DROP TABLE toast_table_name;
     RETURN;
   END IF;
 
   -- Parent table exists and is valid; go ahead with UPDATE and INSERT
   UPDATE pg_class SET reltoastrelid = {1} WHERE oid = parent_table_oid;
   INSERT INTO pg_depend VALUES (1259, {1}, 0, 1259, parent_table_oid, 0, 'i');
-END $$;"""
+END
+$$;"""
             for orphan in self.double_orphans:
                 # Given a TOAST table oid, get its name, extract the original table's oid from the name, and cast to oid
                 extract_oid_expr =  "trim('pg_toast.pg_toast_' from %d::regclass::text)::int::regclass::oid" % orphan["toast_table_oid"]
                 repair_statements.append(plpgsql_func.format(extract_oid_expr, orphan["toast_table_oid"]))
+        if len(repair_statements) > 0:
+            repair_statements = ["SET allow_system_table_mods=true;"] + repair_statements
         return repair_statements
