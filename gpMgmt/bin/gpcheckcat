@@ -4196,7 +4196,7 @@ def checkcatReport():
             reportAllIssuesRecursive(child, graph)
 
     buildGraph()
-    reportedCheck = ['duplicate','missing_extraneous','inconsistent','foreign_key','acl']
+    reportedCheck = ['duplicate','missing_extraneous','inconsistent','foreign_key','acl', 'orphaned_toast_tables']
     myprint('')
     myprint('SUMMARY REPORT')
     myprint('===================================================================')

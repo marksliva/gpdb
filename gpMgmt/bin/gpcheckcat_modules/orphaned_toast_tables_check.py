@@ -94,7 +94,9 @@ GROUP BY toast_table_oid, expected_table_oid, dependent_table_oid;
             elif dependent_table_oid is None:
                 self.dependency_orphans.append(orphan_row)
             else:
-                self.mismatch_orphans.append(orphan_row)
+                # Doesn't work with two tables, can probably remove this
+                pass
+                #self.mismatch_orphans.append(orphan_row)
 
         return False
 
