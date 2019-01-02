@@ -2636,8 +2636,9 @@ retry1:
 			ereport(FATAL,
 					(errcode(ERRCODE_MIRROR_READY),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
-					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
-						   (uint32) (recptr >> 32), (uint32) recptr)));
+					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X\n%s",
+							   (uint32) (recptr >> 32), (uint32) recptr,
+							   TextDatumGetCString(pgsql_version(NULL)))));
 			break;
 		case CAC_OK:
 			break;

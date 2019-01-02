@@ -21,6 +21,61 @@ from gppylib.utils import parseKeyColonValueLines
 
 logger = gplog.get_default_logger()
 
+def _get_segment_version(seg):
+    try:
+        if seg.role == gparray.ROLE_PRIMARY:
+            dburl = dbconn.DbURL(hostname=seg.hostname, port=seg.port, dbname="template1")
+            conn = dbconn.connect(dburl, utility=True)
+            return dbconn.execSQLForSingleton(conn, "select version()")
+
+        if seg.role == gparray.ROLE_MIRROR:
+            cmd = base.Command("Try connecting to mirror",
+                               "psql -h %s -p %s template1 -c 'select 1'"
+                               %(seg.hostname, seg.port))
+            cmd.run(validateAfter=False)
+            if cmd.results.rc == 0:
+                raise RuntimeError("Connection to mirror succeeded unexpectedly")
+
+            # XXX: This is not very robust.  Need a better way to get the version
+            line3 = cmd.results.stderr.split('\n')[2]
+            return line3
+
+        logger.error("Invalid role '%s' for dbid %d", seg.role, seg.dbid)
+        return None
+
+    except Exception as ex:
+        logger.error("Could not get segment version for dbid %d", seg.dbid, exc_info=ex)
+        return None
+
+
+def _get_replication_status(seg):
+    try:
+        if seg.role == gparray.ROLE_PRIMARY:
+            dburl = dbconn.DbURL(hostname=seg.hostname, port=seg.port, dbname="template1")
+            conn = dbconn.connect(dburl, utility=True)
+            return dbconn.execSQLForSingleton(conn, "select state from pg_stat_replication")
+
+        if seg.role == gparray.ROLE_MIRROR:
+            cmd = base.Command("Try connecting to mirror",
+                               "psql -h %s -p %s template1 -c 'select 1'"
+                               %(seg.hostname, seg.port))
+            cmd.run(validateAfter=False)
+            if cmd.results.rc == 0:
+                return "Failing Over"
+
+            if "the database system is in recovery mode" in cmd.results.stderr:
+                return "Up"
+
+            return "Down"
+
+        logger.error("Invalid role '%s' for dbid %d", seg.role, seg.dbid)
+        return None
+
+    except Exception as ex:
+        logger.error("Could not get replication state for dbid %d", seg.dbid, exc_info=ex)
+        return None
+
+
 #
 # todo: the file containing this should be renamed since it gets more status than just from transition
 #
@@ -138,14 +193,12 @@ class GpSegStatusProgram:
             for statusRequest in toFetch:
                 data = None
                 if statusRequest == gp.SEGMENT_STATUS__GET_VERSION:
-#                    data = self.getStatusUsingTransition(seg, statusRequest, pidRunningStatus)
-                    if data is not None:
-                        data = data.rstrip()
+                    data = _get_segment_version(seg)
 
                 elif statusRequest == gp.SEGMENT_STATUS__GET_MIRROR_STATUS:
-#                    data = self.getStatusUsingTransition(seg, statusRequest, pidRunningStatus)
+                    data = _get_replication_status(seg)
                     if data is not None:
-                        data = self.__processMirrorStatusOutput(data)
+                        data = {'databaseStatus': data}
 
                 elif statusRequest == gp.SEGMENT_STATUS__GET_PID:
                     data = self.getPidStatus(seg, pidRunningStatus)
