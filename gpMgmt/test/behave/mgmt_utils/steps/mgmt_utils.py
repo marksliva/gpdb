@@ -2684,8 +2684,7 @@ def impl(context, dbname, broken):
 
 @given('in the database "{dbname}" the toast table for "{table}" is renamed')
 def impl(context, dbname, table):
-    with dbconn.connect(dbconn.DbURL(dbname=dbname), allowSystemTableMods=True) as conn:
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         rel_oid = dbconn.execSQLForSingleton(conn, '''SELECT oid FROM pg_class WHERE relname = '%s';''' % table)
-        sql = '''ALTER TABLE pg_toast.pg_toast_%s RENAME TO pg_toast_renamed''' % rel_oid
-        dbconn.execSQL(conn, sql)
+        dbconn.execSQL(conn, '''SET allow_system_table_mods=true; ALTER TABLE pg_toast.pg_toast_%s RENAME TO pg_toast_renamed''' % rel_oid)
         conn.commit()

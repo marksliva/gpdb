@@ -2910,10 +2910,8 @@ def log_unique_index_violations(violations):
 def checkOrphanedToastTables():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for orphaned TOAST tables')
-    db_connection = connect2(GV.cfg[1], utilityMode=False)
-
     checker = OrphanedToastTablesCheck()
-    check_passed = checker.runCheck(db_connection)
+    check_passed = checker.runCheck(GV.dbname, GV.cfg.values())
 
     checkname = 'orphaned toast table(s)'
     if check_passed:
@@ -2924,8 +2922,8 @@ def checkOrphanedToastTables():
         setError(ERROR_REMOVE)
         # TODO: What logging is needed, if any, when we do a repair?
         #logger.error(checker.get_error_log_output())
-        repair_statements = checker.get_repair_statements()
-        do_repair(repair_statements, issue_type="orphaned_toast_tables", description='Repairing orphaned TOAST tables')
+        segments_to_repair_statements = checker.get_repair_statements()
+        do_repair_for_segments(issue_type="orphaned_toast_tables", description='Repairing orphaned TOAST tables', segments_to_repair_statements=segments_to_repair_statements)
 
 ############################################################################
 # Help populating repair part for all checked types
@@ -3182,6 +3180,18 @@ def do_repair(sql_repair_contents, issue_type, description):
 
     print_repair_issues(repair_dir_path)
 
+def do_repair_for_segments(issue_type, description, segments_to_repair_statements):
+    logger.info("Starting repair of %s" % description)
+
+    repair_dir_path = ""
+    try:
+        repair_obj = Repair(context=GV, issue_type=issue_type, desc=description)
+        repair_dir_path = repair_obj.create_segment_repair_scripts(segments_to_repair_statements)
+    except Exception, ex:
+        logger.fatal(str(ex))
+
+    print_repair_issues(repair_dir_path)
+
 
 def do_repair_for_extra(catalog_issues):
     setError(ERROR_REMOVE)
@@ -3191,7 +3201,8 @@ def do_repair_for_extra(catalog_issues):
             repair_obj = Repair(context=GV, issue_type="extra", desc="Removing extra entries")
             repair_dir_path = repair_obj.create_repair_for_extra_missing(catalog_table_obj=catalog_table_obj,
                                                                          issues=issues,
-                                                                         pk_name=pk_name)
+                                                                         pk_name=pk_name,
+                                                                         segments=GV.cfg)
         except Exception, ex:
             logger.fatal(str(ex))
 
