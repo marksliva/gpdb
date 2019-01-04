@@ -1619,7 +1619,7 @@ def impl(context, path, num):
 
 @then('run all the repair scripts in the dir "{dir}"')
 def impl(context, dir):
-    command = "cd {0} ; for i in *.sh ; do bash $i; done".format(dir)
+    command = "find {0} -name *.sh -exec bash {{}} \;".format(dir)
     run_command(context, command)
 
 
