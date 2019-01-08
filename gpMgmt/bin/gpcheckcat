@@ -25,7 +25,7 @@ from datetime import datetime
 
 try:
     from gppylib.db import dbconn
-    from gppylib.gplog import *
+    import gppylib.gplog
     from gppylib.gpcatalog import *
     from gppylib.commands.unix import *
     from gppylib.system.info import *
@@ -39,16 +39,16 @@ try:
 
 
 except ImportError, e:
-    sys.exit('Error: unable to import module: ' + str(e))
+    gppylib.gplog.sys.exit('Error: unable to import module: ' + str(e))
 
 # cache OID -> object name cache
 oidmap = {}
 
 # -------------------------------------------------------------------------------
 EXECNAME = os.path.split(__file__)[-1]
-setup_tool_logging(EXECNAME, getLocalHostname(), getUserName())
-very_quiet_stdout_logging()
-logger = get_default_logger()
+gppylib.gplog.setup_tool_logging(EXECNAME, getLocalHostname(), getUserName())
+gppylib.gplog.very_quiet_stdout_logging()
+logger = gppylib.gplog.get_default_logger()
 
 sysinfo = SystemInfo(logger)
 
@@ -95,6 +95,8 @@ def setError(level):
 ###############################
 class Global():
     def __init__(self):
+        self.timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
         self.retcode = SUCCESS
         self.opt = {}
         self.opt['-h'] = None
@@ -105,7 +107,7 @@ class Global():
         self.opt['-V'] = False
         self.opt['-t'] = False
 
-        self.opt['-g'] = 'gpcheckcat.repair.' + Repair.TIMESTAMP
+        self.opt['-g'] = 'gpcheckcat.repair.' + self.timestamp
         self.opt['-B'] = parallelism
         self.opt['-T'] = None
 
@@ -185,7 +187,7 @@ GV = Global()
 ###############################
 def usage(exitarg=None):
     print __doc__
-    sys.exit(exitarg)
+    gppylib.gplog.sys.exit(exitarg)
 
 
 ###############################
@@ -220,7 +222,7 @@ def getalldbs():
 def parseCommandLine():
     try:
         # A colon following the flag indicates an argument is expected
-        (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:C:lE')
+        (options, args) = getopt.getopt(gppylib.gplog.sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:C:lE')
     except Exception, e:
         usage('Error: ' + str(e))
 
@@ -243,7 +245,7 @@ def parseCommandLine():
     if GV.opt['-l']: return
 
     if GV.opt['-v']:
-        enable_verbose_logging()
+        gppylib.gplog.enable_verbose_logging()
 
     setdef('-P', 'PGPASSWORD')
     setdef('-U', 'PGUSER')
@@ -2396,9 +2398,9 @@ def checkTableACL(cat):
             logger.error('  %s acl check has %d issue(s)' % (catname, nrows))
 
             fields = curs.listfields()
-            log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
+            gppylib.gplog.log_literal(logger, gppylib.gplog.gppylib.gplog.logging.ERROR, "    " + " | ".join(fields))
             for row in curs.getresult():
-                log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
+                gppylib.gplog.log_literal(logger, gppylib.gplog.gppylib.gplog.logging.ERROR, "    " + " | ".join(map(str, row)))
             processACLResult(catname, fields, curs.getresult())
 
     except Exception, e:
@@ -2518,21 +2520,21 @@ def checkTableMissingEntry(cat):
         else:
             if catname in ['pg_constraint']:
                 logger_with_level = logger.warning
-                log_level = logging.WARNING
+                log_level = gppylib.gplog.gppylib.gplog.logging.WARNING
             else:
                 GV.checkStatus = False
                 GV.missingEntryStatus = False
                 logger_with_level = logger.error
-                log_level = logging.ERROR
+                log_level = gppylib.gplog.gppylib.gplog.logging.ERROR
 
             logger.info(('[%s] Checking for missing or extraneous entries for ' + catname) %
-                        ('WARNING' if log_level == logging.WARNING else 'FAIL'))
+                        ('WARNING' if log_level == gppylib.gplog.gppylib.gplog.logging.WARNING else 'FAIL'))
             logger_with_level('  %s has %d issue(s)' % (catname, nrows))
             fields = curs.listfields()
-            log_literal(logger, log_level, "    " + " | ".join(fields))
+            gppylib.gplog.log_literal(logger, log_level, "    " + " | ".join(fields))
             results = curs.getresult()
             for row in results:
-                log_literal(logger, log_level, "    " + " | ".join(map(str, row)))
+                gppylib.gplog.log_literal(logger, log_level, "    " + " | ".join(map(str, row)))
             processMissingDuplicateEntryResult(catname, fields, results, "missing")
             if catname == 'pg_type':
                 generateVerifyFile(catname, fields, results, 'missing_extraneous')
@@ -2683,9 +2685,9 @@ def checkTableInconsistentEntry(cat):
             logger.error('  %s has %d issue(s)' % (catname, nrows))
 
             fields = curs.listfields()
-            log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
+            gppylib.gplog.log_literal(logger, gppylib.gplog.gppylib.gplog.logging.ERROR, "    " + " | ".join(fields))
             for row in curs.getresult():
-                log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
+                gppylib.gplog.log_literal(logger, gppylib.gplog.gppylib.gplog.logging.ERROR, "    " + " | ".join(map(str, row)))
             results = curs.getresult()
             processInconsistentEntryResult(catname, pkey, fields, results)
             if catname == 'pg_type':
@@ -2822,10 +2824,10 @@ def checkTableDuplicateEntry(cat):
             logger.error('  %s has %d issue(s)' % (catname, nrows))
 
             fields = curs.listfields()
-            log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
+            gppylib.gplog.log_literal(logger, gppylib.gplog.gppylib.gplog.logging.ERROR, "    " + " | ".join(fields))
             results = curs.getresult()
             for row in results:
-                log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
+                gppylib.gplog.log_literal(logger, gppylib.gplog.gppylib.gplog.logging.ERROR, "    " + " | ".join(map(str, row)))
             processMissingDuplicateEntryResult(catname, fields, results, "duplicate")
             if catname == 'pg_type':
                 generateVerifyFile(catname, fields, results, 'duplicate')
@@ -2910,8 +2912,10 @@ def log_unique_index_violations(violations):
 def checkOrphanedToastTables():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for orphaned TOAST tables')
+
+    db_connection = connect2(GV.cfg[1], utilityMode=False)
     checker = OrphanedToastTablesCheck()
-    check_passed = checker.runCheck(GV.dbname, GV.cfg.values())
+    check_passed = checker.runCheck(db_connection)
 
     checkname = 'orphaned toast table(s)'
     if check_passed:
@@ -2922,8 +2926,34 @@ def checkOrphanedToastTables():
         setError(ERROR_REMOVE)
         # TODO: What logging is needed, if any, when we do a repair?
         #logger.error(checker.get_error_log_output())
-        segments_to_repair_statements = checker.get_repair_statements()
-        do_repair_for_segments(issue_type="orphaned_toast_tables", description='Repairing orphaned TOAST tables', segments_to_repair_statements=segments_to_repair_statements)
+
+        for issue in checker.get_issues():
+            row = issue['row']
+            oid = row['dependent_table_oid']
+            catname = row['dependent_table_name']
+
+            cat_issue_obj = CatOrphanToastTableIssue(oid, catname, issue)
+            error_object = getGPObject(oid, catname)
+            error_object.addOrphanToastTableIssue(cat_issue_obj)
+
+        log_output = ['Orphan toast tables detected for the following scenarios:']
+        for issue in checker.get_issues_by_type():
+            log_output.append('\n' + issue['issue_header'])
+            log_output.append('content_id | toast_table_oid | toast_table_name | expected_table_oid | expected_table_name | dependent_table_oid | dependent_table_name')
+            log_output.append('-----------+-----------------+------------------+--------------------+---------------------+---------------------+---------------------')
+            for row in issue['rows']:
+                log_output.append('{} | {} | {} | {} | {} | {} | {}'.format(
+                    row['content_id'],
+                    row['toast_table_oid'],
+                    row['toast_table_name'],
+                    row['expected_table_oid'],
+                    row['expected_table_name'],
+                    row['dependent_table_oid'],
+                    row['dependent_table_name']))
+        log_output = '\n'.join(log_output)
+        log_output = log_output + '\n'
+        logger.error(log_output)
+    do_repair_for_segments(segments_to_repair_statements=checker.get_repair_statements(GV.cfg), issue_type="orphaned_toast_tables", description='Repairing orphaned TOAST tables',)
 
 ############################################################################
 # Help populating repair part for all checked types
@@ -3087,7 +3117,7 @@ def runCheckCatname(catalog_table_obj):
         etime = time.time()
         elapsed = etime - stime
         GV.elapsedTime += elapsed
-        elapsed = str(datetime.timedelta(seconds=elapsed))[:-4]
+        elapsed = str(gppylib.gplog.datetime.timedelta(seconds=elapsed))[:-4]
         GV.totalCheckRun += 1
         myprint("Total runtime for test '%s': %s" % (check, elapsed))
 
@@ -3110,7 +3140,7 @@ def runOneCheck(name):
         etime = time.time()
         elapsed = etime - stime
         GV.elapsedTime += elapsed
-        elapsed = str(datetime.timedelta(seconds=elapsed))[:-4]
+        elapsed = str(gppylib.gplog.datetime.timedelta(seconds=elapsed))[:-4]
         myprint("Total runtime for test '%s': %s" % (name, elapsed))
         if GV.checkStatus == False:
             GV.failedChecks.append(name)
@@ -3180,7 +3210,7 @@ def do_repair(sql_repair_contents, issue_type, description):
 
     print_repair_issues(repair_dir_path)
 
-def do_repair_for_segments(issue_type, description, segments_to_repair_statements):
+def do_repair_for_segments(segments_to_repair_statements, issue_type, description):
     logger.info("Starting repair of %s" % description)
 
     repair_dir_path = ""
@@ -3218,13 +3248,13 @@ def print_repair_issues(repair_dir_path):
 def checkReindexRepair():
     if len(GV.Reindex) > 0:
         # dbname.type.timestamp.sql
-        filename = '%s.%s.%s.sql' % (GV.dbname, "reindex", Repair.TIMESTAMP)
+        filename = '%s.%s.%s.sql' % (GV.dbname, "reindex", GV.timestamp)
         fullpath = '%s/%s' % (GV.opt['-g'], filename)
         try:
             file = open(fullpath, 'w')
         except Exception, e:
             logger.fatal('Unable to create file "%s": %s' % (fullpath, str(e)))
-            sys.exit(1)
+            gppylib.gplog.sys.exit(1)
 
         description = '\necho "Reindexing potentially damaged bitmap indexes"\n'
         for r in GV.Reindex:
@@ -3250,14 +3280,14 @@ def checkPoliciesRepair():
 def checkSegmentRepair(maybeRemove, catmod_guc, seg):
     # dbid.host.port.dbname.timestamp.sql
     c = GV.cfg[seg]
-    filename = '%i.%s.%i.%s.%s.sql' % (seg, c['hostname'], c['port'], GV.dbname, Repair.TIMESTAMP)
+    filename = '%i.%s.%i.%s.%s.sql' % (seg, c['hostname'], c['port'], GV.dbname, GV.timestamp)
     filename = filename.replace(' ', '_')
     fullpath = '%s/%s' % (GV.opt['-g'], filename)
     try:
         file = open(fullpath, 'w')
     except Exception, e:
         logger.fatal('Unable to create file "%s": %s' % (fullpath, str(e)))
-        sys.exit(1)
+        gppylib.gplog.sys.exit(1)
 
     # unique
     lines = set()
@@ -3843,6 +3873,21 @@ class CatDependencyIssue:
         )
 
 # -------------------------------------------------------------------------------
+class CatOrphanToastTableIssue:
+    def __init__(self, oid, catname, issue):
+        self.oid = oid
+        self.catname = catname
+        self.issue = issue
+
+    def report(self):
+        row = self.issue['row']
+        hostname = GV.report_cfg[row['content_id']]['hostname']
+        port = GV.report_cfg[row['content_id']]['port']
+
+        myprint('''       %s On segment %s (%s:%s) table '%s' (oid: %s) has an orphaned toast table '%s' (oid: %s) expected table '%s' (oid: %s).''' %
+                (self.issue['issue_description'], row['content_id'], hostname, port, self.catname, self.oid, row['toast_table_name'], row['toast_table_oid'], row['expected_table_name'], row['expected_table_oid']))
+
+# -------------------------------------------------------------------------------
 class GPObject:
     def __init__(self, oid, catname):
         self.oid = oid
@@ -3853,6 +3898,7 @@ class GPObject:
         self.aclIssues = {}  # key=issue.catname, value=list of catACLIssue
         self.foreignkeyIssues = {}  # key=issue.catname, value=list of catForeignKeyIssue
         self.dependencyIssues = {} # key=issue.catname, value=list of catDependencyIssue
+        self.orphanToastTableIssues = {} # key=issue.catname, value=list of orphanToastTableIssues
 
     def addDependencyIssue(self, issue):
         if issue.catname in self.dependencyIssues:
@@ -3890,6 +3936,12 @@ class GPObject:
         else:
             self.foreignkeyIssues[issue.catname] = [issue]
 
+    def addOrphanToastTableIssue(self, issue):
+        if issue.catname in self.orphanToastTableIssues:
+            self.orphanToastTableIssues[issue.catname].append(issue)
+        else:
+            self.orphanToastTableIssues[issue.catname] = [issue]
+
     def isTopLevel(self):
         return True
 
@@ -3903,7 +3955,7 @@ class GPObject:
 
         def __myprint(string):
             if self.catname in ['pg_constraint']:
-                _myprint(string, logging.WARNING)
+                _myprint(string, gppylib.gplog.gppylib.gplog.logging.WARNING)
             else:
                 _myprint(string)
 
@@ -3978,6 +4030,14 @@ class GPObject:
         if len(self.aclIssues):
             for catname, issues in self.aclIssues.iteritems():
                 myprint('    Name of test which found this issue: acl_%s' % catname)
+                for each in issues:
+                    each.report()
+            myprint('')
+
+        # Report Orphan Toast Table issues
+        if len(self.orphanToastTableIssues):
+            for catname, issues in self.orphanToastTableIssues.iteritems():
+                myprint('    Name of test which found this issue: orphaned_toast_tables')
                 for each in issues:
                     each.report()
             myprint('')
@@ -4211,8 +4271,8 @@ def checkcatReport():
     myprint('')
     myprint('SUMMARY REPORT')
     myprint('===================================================================')
-    elapsed = datetime.timedelta(seconds=int(GV.elapsedTime))
-    endTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    elapsed = gppylib.gplog.datetime.timedelta(seconds=int(GV.elapsedTime))
+    endTime = gppylib.gplog.datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     myprint('Completed %d test(s) on database \'%s\' at %s with elapsed time %s' \
             % (GV.totalCheckRun, GV.dbname, endTime, elapsed))
 
@@ -4227,7 +4287,7 @@ def checkcatReport():
         if total == 0:
             myprint('Found no catalog issue\n')
             if par.catname in ['pg_constraint']:
-                myprint('Warnings were generated, see %s for detail\n' % get_logfile())
+                myprint('Warnings were generated, see %s for detail\n' % gppylib.gplog.get_logfile())
         else:
             myprint('Found a total of %d issue(s)' % total)
 
@@ -4287,11 +4347,11 @@ def checkcatReport():
     notReported = set(GV.failedChecks).difference(reportedCheck)
     if len(notReported) > 0:
         myprint('Failed test(s) that are not reported here: %s' % (', '.join(notReported)))
-        myprint('See %s for detail\n' % get_logfile())
+        myprint('See %s for detail\n' % gppylib.gplog.get_logfile())
 
 
-def _myprint(str, level=logging.CRITICAL):
-    log_literal(logger, level, str)
+def _myprint(str, level=gppylib.gplog.logging.CRITICAL):
+    gppylib.gplog.log_literal(logger, level, str)
 
 
 myprint = _myprint
@@ -4307,7 +4367,7 @@ def generateVerifyFile(catname, fields, results, checkname):
           ) alltyprelids
           GROUP BY relname, oid ORDER BY count(*) desc
     '''.format(in_clause=in_clause)
-    filename = 'gpcheckcat.verify.%s.%s.%s.%s.sql' % (GV.dbname, catname, checkname, Repair.TIMESTAMP)
+    filename = 'gpcheckcat.verify.%s.%s.%s.%s.sql' % (GV.dbname, catname, checkname, GV.timestamp)
     try:
         with open(filename, 'w') as fp:
             fp.write(verify_sql + '\n')
@@ -4324,12 +4384,12 @@ def main():
     parseCommandLine()
     if GV.opt['-l']:
         listAllChecks()
-        sys.exit(GV.retcode)
+        gppylib.gplog.sys.exit(GV.retcode)
 
     GV.version = getversion()
     if GV.version < "4.0":
         myprint("Error: only Greenplum database version >= 4.0 are supported\n")
-        sys.exit(GV.retcode)
+        gppylib.gplog.sys.exit(GV.retcode)
 
     GV.cfg = getGPConfiguration()
     truncate_batch_size(len(GV.cfg.keys()))
@@ -4361,7 +4421,7 @@ def main():
             except LookupError, e:
                 myprint("'%s' is not a valid test\n\n" % (name))
                 setError(ERROR_NOREPAIR)
-                sys.exit(GV.retcode)
+                gppylib.gplog.sys.exit(GV.retcode)
         elif GV.opt['-C']:
             namestr = GV.opt['-C']
             try:
@@ -4369,7 +4429,7 @@ def main():
                 runCheckCatname(catalog_table_obj)
             except Exception, e:
                 setError(ERROR_NOREPAIR)
-                sys.exit(GV.retcode)
+                gppylib.gplog.sys.exit(GV.retcode)
         else:
             runAllChecks()
 
@@ -4379,7 +4439,7 @@ def main():
         if not GV.opt['-S']:
             GV.opt['-S'] = "none"
 
-    sys.exit(GV.retcode)
+    gppylib.gplog.sys.exit(GV.retcode)
 
 #############
 if __name__ == '__main__':

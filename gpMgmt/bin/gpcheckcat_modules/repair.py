@@ -13,27 +13,22 @@ Creates repair for the following gpcheckcat checks
 
 import os
 import stat
-from datetime import datetime
 from gpcheckcat_modules.repair_missing_extraneous import RepairMissingExtraneous
 
 
 class Repair:
-
-    TIMESTAMP = datetime.now().strftime("%Y%m%d%H%M%S")
-
     def __init__(self, context=None, issue_type=None, desc=None):
         self._context = context
         self._issue_type = issue_type
         self._desc = desc
-        self._repair_script = 'runsql_%s.sh' % self.TIMESTAMP
 
     def create_repair(self, sql_repair_contents):
         repair_dir = self.create_repair_dir()
 
         master_segment, = filter(lambda config: config['content'] == -1, self._context.cfg.values())
 
-        sql_file_name = self.__create_sql_file_in_repair_dir(repair_dir, sql_repair_contents, master_segment)
-        self.__create_bash_script_in_repair_dir(repair_dir, sql_file_name, master_segment)
+        sql_filename = self.__create_sql_file_in_repair_dir(repair_dir, sql_repair_contents, master_segment)
+        self.__create_bash_script_in_repair_dir(repair_dir, sql_filename, master_segment)
 
         return repair_dir
 
@@ -54,12 +49,10 @@ class Repair:
 
         return repair_dir
 
-    # segment_to_sql_repair_statements = list of dictionaries with segment hostname, port, segmentID, etc.
-    def create_segment_repair_scripts(self, segments_to_repair_statements):
+    def create_segment_repair_scripts(self, segments):
         repair_dir = self.create_repair_dir()
 
-        for segment in filter(lambda seg: len(seg['repair_statements']) > 0, segments_to_repair_statements):
-
+        for segment in segments:
             sql_filename = self.__create_sql_file_in_repair_dir(repair_dir, segment['repair_statements'], segment)
             self.__create_bash_script_in_repair_dir(repair_dir, sql_filename, segment)
 
@@ -101,19 +94,18 @@ class Repair:
 
     def __get_filename(self, segment):
         if segment['content'] == -1:
-            return '%s_%s_%s' % (self._context.dbname, self._issue_type, self.TIMESTAMP)
+            return '%s_%s_%s' % (self._context.dbname, self._issue_type, self._context.timestamp)
         else:
-            filename = '%i.%s.%i.%s.%s' % (segment['dbid'], segment['hostname'], segment['port'], self._context.dbname, self.TIMESTAMP)
+            filename = '%i.%s.%i.%s.%s' % (segment['dbid'], segment['hostname'], segment['port'], self._context.dbname, self._context.timestamp)
             return filename.replace(' ', '_')
 
-    def __get_bash_filepath(self, repair_dir, catalog_name):
-        bash_file_name = self._repair_script
+    def __get_bash_filepath(self, repair_dir, catalog_name=None):
+        bash_filename = 'runsql_%s.sh' % self._context.timestamp
 
         if self._issue_type and catalog_name:
-            bash_file_name = 'run_{0}_{1}_{2}_{3}.sh'.format(self._context.dbname, self._issue_type,
-                                                             catalog_name, self.TIMESTAMP)
+            bash_filename = 'run_{0}_{1}_{2}_{3}.sh'.format(self._context.dbname, self._issue_type, catalog_name, self._context.timestamp)
 
-        return os.path.join(repair_dir, bash_file_name)
+        return os.path.join(repair_dir, bash_filename)
 
     def __get_bash_script_content(self, sql_filename, segment):
         out_filename = self.__get_filename(segment) + ".out"
