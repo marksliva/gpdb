@@ -8,13 +8,13 @@ except ImportError, e:
 
 class OrphanedToastTablesCheck:
 
+
     def __init__(self):
         self.issues = []  # a flat list of all orphaned issues
         self.reference_orphans = []  # orphaned by missing reltoastrelid value
         self.dependency_orphans = []  # orphaned by missing pg_depend entry
         self.mismatch_orphans = []  # orphaned by incorrect reltoastrelid value
         self.double_orphans = []  # orphaned by both missing/incorrect reltoastrelid value and missing pg_depend entry
-
         # Normally, there's a "loop" between a table and its TOAST table:
         # - The table's reltoastrelid field in pg_class points to its TOAST table
         # - The TOAST table has an entry in pg_depend pointing to its table
@@ -97,31 +97,61 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
                 self.double_orphans.append(row)
                 self.issues.append(dict(
                     row=row,
+                    catname=row['toast_table_name'],
+                    oid=row['toast_table_oid'],
                     issue_type='double_orphans',
-                    issue_description='Found orphaned toast table due to "double orphan" caused by ______.'))  # TODO: Needs to be reworded!
+                    issue_description='Found orphaned TOAST table due to "double orphan" caused by missing reltoastrelid and pg_depend entry.',
+                    issue_cause='is an orphan TOAST table.'))
             elif row['expected_table_oid'] is None:
                 self.reference_orphans.append(row)
                 self.issues.append(dict(
                     row=row,
+                    catname=row['dependent_table_name'],
+                    oid=row['dependent_table_oid'],
                     issue_type='reference_orphans',
-                    issue_description='Found orphaned toast table due to "bad reference" caused by missing reltoastrelid.'))
+                    issue_description='Found orphaned TOAST table due to "bad reference" caused by missing reltoastrelid.',
+                    issue_cause='''has an orphaned TOAST table '%s' (oid: %s).''' % (row['toast_table_name'], row['toast_table_oid'])))
             elif row['dependent_table_oid'] is None:
                 self.dependency_orphans.append(row)
                 self.issues.append(dict(
                     row=row,
+                    catname=row['expected_table_name'],
+                    oid=row['expected_table_oid'],
                     issue_type='dependency_orphans',
-                    issue_description='Found orphaned toast table due to "bad dependency" caused by missing pg_depend entry.'))
+                    issue_description='Found orphaned TOAST table due to "bad dependency" caused by missing pg_depend entry.',
+                    issue_cause='''has an orphaned TOAST table '%s' (oid: %s).''' % (row['toast_table_name'], row['toast_table_oid'])))
             else:
                 self.mismatch_orphans.append(row)
                 self.issues.append(dict(
                     row=row,
+                    catname=row['dependent_table_name'],
+                    oid=row['dependent_table_oid'],
                     issue_type='mismatch_orphans',
-                    issue_description='Found orphaned toast table due to "double fault" caused by 1) missing reltoastrelid and pg_depend entry, or 2) a renamed toast table.'))
+                    issue_description='Found orphaned TOAST table due to "mismatch" caused by a reltoastrelid pointing to an incorrect TOAST table.',
+                    issue_cause='''has an orphaned TOAST table '%s' (oid: %s). Expected dependent table to be '%s' (oid: %s).''' % (row['toast_table_name'], row['toast_table_oid'], row['expected_table_name'], row['expected_table_oid'])))
 
         return False
 
     def get_issues(self):
         return self.issues
+
+    def get_fix_text(self):
+        log_output = ['\nORPHAN TOAST TABLE FIXES:', '===================================================================']
+        for issue_type in set(map(lambda issue: issue['issue_type'], self.issues)):
+            if issue_type == 'double_orphans':
+                log_output.append(filter(lambda issue: issue['issue_type'] == issue_type, self.get_issues_by_type())[0]['issue_header'])
+                log_output.append('  To fix update the TOAST table pg_class entry reltoastrelid to be match the dependent table oid.\n')
+            elif issue_type == 'reference_orphans':
+                log_output.append(filter(lambda issue: issue['issue_type'] == issue_type, self.get_issues_by_type())[0]['issue_header'])
+                log_output.append('  To fix update the TOAST table pg_class entry reltoastrelid to be match the dependent table oid.\n')
+            elif issue_type == 'dependency_orphans':
+                log_output.append(filter(lambda issue: issue['issue_type'] == issue_type, self.get_issues_by_type())[0]['issue_header'])
+                log_output.append('  To fix update the TOAST table pg_class entry reltoastrelid to be match the dependent table oid.\n')
+            elif issue_type == 'mismatch_orphans':
+                log_output.append(filter(lambda issue: issue['issue_type'] == issue_type, self.get_issues_by_type())[0]['issue_header'])
+                log_output.append('  To fix update the TOAST table pg_class entry reltoastrelid to be match the dependent table oid.\n')
+
+        return '\n'.join(log_output)
 
     def get_issues_by_type(self):
         issues_by_type = []
@@ -129,28 +159,28 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
         if self.double_orphans:
             issues_by_type.append({
                 'issue_type': 'double_orphans',
-                'issue_header': 'Double Orphan: ',  # TODO: Needs to be reworded!
+                'issue_header': 'Double Orphan: orphaned TOAST table due to missing reltoastrelid and pg_depend entry.',
                 'rows': self.double_orphans
             })
 
         if self.reference_orphans:
             issues_by_type.append({
                 'issue_type': 'reference_orphans',
-                'issue_header': 'Bad Reference: orphaned toast tables due to missing reltoastrelid',
+                'issue_header': 'Bad Reference: orphaned TOAST tables due to missing reltoastrelid',
                 'rows': self.reference_orphans
             })
 
         if self.dependency_orphans:
             issues_by_type.append({
                 'issue_type': 'dependency_orphans',
-                'issue_header': 'Bad Dependency: orphaned toast tables due to missing pg_depend entry',
+                'issue_header': 'Bad Dependency: orphaned TOAST tables due to missing pg_depend entry',
                 'rows': self.dependency_orphans
             })
 
         if self.mismatch_orphans:
             issues_by_type.append({
                 'issue_type': 'mismatch_orphans',
-                'issue_header': 'Double Fault: orphaned toast tables due to both missing reltoastrelid and missing pg_depend entry Or renamed toast table',
+                'issue_header': 'Mismatch: orphaned TOAST tables due to reltoastrelid pointing to an incorrect TOAST table',
                 'rows': self.mismatch_orphans
             })
 
@@ -168,7 +198,7 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
             repair_statement = "INSERT INTO pg_depend VALUES (1259, %d, 0, 1259, %d, 0, 'i');" % (row["toast_table_oid"], row["expected_table_oid"])
             content_id_to_segment_map[row['content_id']]['repair_statements'].append(repair_statement)
 
-        # for row in self.mismatch_orphans:  # Doesn't work with two tables, can probably remove this
+        # for row in self.mismatch_orphans:  # The following repair does not work with two or more tables, so let the user repair manually for safety.
         #     repair_statement = "UPDATE pg_depend SET refobjid = %d WHERE objid = %d AND refobjid = %d;" % (row["expected_table_oid"], row["toast_table_oid"], row["dependent_table_oid"])
         #     content_id_to_segment_map[row['content_id']]['repair_statements'].append(repair_statement)
 
