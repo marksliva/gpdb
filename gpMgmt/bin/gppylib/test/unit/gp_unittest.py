@@ -1,9 +1,9 @@
-import unittest
+import unittest2
 
 from mock import MagicMock, Mock
 
 
-class GpTestCase(unittest.TestCase):
+class GpTestCase(unittest2.TestCase):
     def __init__(self, methodName='runTest'):
         super(GpTestCase, self).__init__(methodName)
         self.patches = []
@@ -65,9 +65,9 @@ def add_setup(setup=None, teardown=None):
 
 # hide unittest dependencies here
 def run_tests():
-    unittest.main(verbosity=2, buffer=True)
+    unittest2.main(verbosity=2, buffer=True)
 
-skip = unittest.skip
+skip = unittest2.skip
 
 
 class FakeCursor:

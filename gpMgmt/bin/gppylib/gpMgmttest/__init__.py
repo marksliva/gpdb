@@ -1,11 +1,11 @@
-import unittest
+import unittest2
 import time
 
-class GpMgmtTestRunner(unittest.TextTestRunner):
+class GpMgmtTestRunner(unittest2.TextTestRunner):
     def _makeResult(self):
         return GpMgmtTextTestResult(self.stream, self.descriptions, self.verbosity)
 
-class GpMgmtTextTestResult(unittest.TextTestResult):
+class GpMgmtTextTestResult(unittest2.TextTestResult):
 
     def __init__(self, stream, descriptions, verbosity):
         super(GpMgmtTextTestResult, self).__init__(stream, descriptions, verbosity)

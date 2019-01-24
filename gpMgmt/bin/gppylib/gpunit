@@ -11,11 +11,11 @@ so that it can be integrated with Pulse.
 
 """
 
-__unittest = True
+__unittest2 = True
 
-import unittest
-from unittest.main import USAGE_AS_MAIN
+import unittest2
+from unittest2.main import USAGE_AS_MAIN
 from gppylib import gpMgmttest
 
-unittest.TestProgram.USAGE = USAGE_AS_MAIN
-unittest.TestProgram(module=None, testRunner=gpMgmttest.GpMgmtTestRunner)
+unittest2.TestProgram.USAGE = USAGE_AS_MAIN
+unittest2.TestProgram(module=None, testRunner=gpMgmttest.GpMgmtTestRunner)
