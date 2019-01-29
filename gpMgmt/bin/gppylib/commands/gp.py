@@ -1178,6 +1178,13 @@ def get_pid_from_remotehost(host, datadir):
         pid = int(cmd.get_results().stdout.strip())
     return pid
 
+def remove_postmaster_pid_from_remotehost(host, datadir):
+    cmd = Command(name = 'remove the postmaster.pid file',
+                  cmdStr = 'rm -f %s/postmaster.pid' % datadir,
+                  ctxt=REMOTE, remoteHost = host)
+    cmd.run()
+    return cmd.get_results().rc
+
 def is_pid_postmaster(datadir, pid, remoteHost=None):
     """
     This function returns true on any uncertainty: if it cannot execute pgrep, pwdx or just connect to the standby host

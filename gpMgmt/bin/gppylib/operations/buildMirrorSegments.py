@@ -15,7 +15,7 @@ from gppylib.operations import startSegments
 from gppylib.gp_era import read_era
 from gppylib.operations.utils import ParallelOperation, RemoteOperation
 from gppylib.operations.unix import CleanSharedMem
-from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
+from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost, remove_postmaster_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
 
 logger = gplog.get_default_logger()
@@ -323,6 +323,11 @@ class GpMirrorListToBuild:
                                  dbname='template1')
             conn = dbconn.connect(dburl, utility=True)
             dbconn.execSQL(conn, "CHECKPOINT")
+
+            # If the postmaster.pid still exists and another process is using that pid, pg_rewind will fail.
+            remove_postmaster_pid_from_remotehost(
+                targetSegment.getSegmentHostName(),
+                targetSegment.getSegmentDataDirectory())
 
             # Run pg_rewind to do incremental recovery.
             cmd = gp.SegmentRewind('segment rewind',
