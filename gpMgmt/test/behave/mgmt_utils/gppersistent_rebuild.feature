@@ -51,6 +51,7 @@ Feature: persistent rebuild tests
         Given the database is running
         And there is a "ao" table "public.ao_part_table" in "bkdb" having "1000" partitions
         And a checkpoint is taken
+        And master and standby master are fully synced
         And the user runs "gpconfig -c shared_buffers -v 512kB"
         And gpconfig should return a return code of 0
         And the database is restarted

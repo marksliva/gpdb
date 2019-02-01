@@ -3744,6 +3744,19 @@ def impl(context, file, path):
 
     raise Exception('File was not found in :' + path)
 
+@given('master and standby master are fully synced')
+def impl(context):
+    synced_interval = 600 # 5 minutes
+    count = 0
+    while count < synced_interval:
+        with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
+            result = dbconn.execSQL(conn, 'select sent_location = replay_location from pg_stat_replication')
+            if result.fetchone()[0] == True:
+                return
+        count += 1
+        sleep(0.5)
+    raise Exception('Failed to sync master and standby within %s seconds' % synced_interval)
+
 @given('a checkpoint is taken')
 def impl(context):
     with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
