@@ -853,10 +853,10 @@ class ConfigureNewSegment(Command):
       etc.
     """
 
-    def __init__(self, name, confinfo, logdir, newSegments=False, tarFile=None,
+    def __init__(self, name, confinfo, logfile, newSegments=False, tarFile=None,
                  batchSize=None, verbose=False,ctxt=LOCAL, remoteHost=None, validationOnly=False, writeGpIdFileOnly=False,
                  forceoverwrite=False):
-        cmdStr = '$GPHOME/bin/lib/gpconfigurenewsegment -c \"%s\" -l %s' % (confinfo, pipes.quote(logdir))
+        cmdStr = '$GPHOME/bin/lib/gpconfigurenewsegment -c \"%s\" -o %s' % (confinfo, pipes.quote(logfile))
         if newSegments:
             cmdStr += ' -n'
         if tarFile:

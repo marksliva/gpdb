@@ -17,6 +17,7 @@ from gppylib.operations.utils import ParallelOperation, RemoteOperation
 from gppylib.operations.unix import CleanSharedMem
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
+import datetime
 
 logger = gplog.get_default_logger()
 
@@ -391,14 +392,17 @@ class GpMirrorListToBuild:
                         (hostName, dbid, usedDataDirectories.get(path), path))
                 usedDataDirectories[path] = dbid
 
-    def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, actionVerb, suppressErrorCheck=False):
+    def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, actionVerb, suppressErrorCheck=False, log_files=[]):
         for cmd in cmds:
             self.__pool.addCommand(cmd)
 
         if self.__quiet:
             self.__pool.join()
         else:
-            base.join_and_indicate_progress(self.__pool)
+            if log_files:
+                base.join_and_indicate_log_files_progress(self.__pool, log_files)
+            else:
+                base.join_and_indicate_progress(self.__pool)
 
         if not suppressErrorCheck:
             self.__pool.check_results()
@@ -437,14 +441,26 @@ class GpMirrorListToBuild:
 
         destSegmentByHost = GpArray.getSegmentsByHostName(destSegments)
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(destSegments, isTargetReusedLocation)
+        i = 0
 
-        def createConfigureNewSegmentCommand(hostName, cmdLabel, validationOnly):
+        def createConfigureNewSegmentCommand(hostName, cmdLabel, validationOnly, log_files, i):
+
             segmentInfo = newSegmentInfo[hostName]
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
 
+            pgbasebackup_start_time = datetime.datetime.today().strftime('%Y%m%d_%H%M%S')
+            log_file = '%s/pg_basebackup.%s.dbid%s.out' % (gplog.get_logger_dir(),
+                                                                                  pgbasebackup_start_time,
+                                                                                  i) # todo fix it
+            i += 1
+            log_files.append({
+                'log_file': log_file,
+                'host_name': hostName
+            })
+
             return gp.ConfigureNewSegment(cmdLabel,
                                           segmentInfo,
-                                          gplog.get_logger_dir(),
+                                          log_file,
                                           newSegments=True,
                                           verbose=gplog.logging_is_verbose(),
                                           batchSize=self.__parallelDegree,
@@ -458,15 +474,16 @@ class GpMirrorListToBuild:
         #
         self.__logger.info('Validating remote directories')
         cmds = []
+        log_files = []
         for hostName in destSegmentByHost.keys():
-            cmds.append(createConfigureNewSegmentCommand(hostName, 'validate blank segments', True))
+            cmds.append(createConfigureNewSegmentCommand(hostName, 'validate blank segments', True, log_files, i))
         for cmd in cmds:
             self.__pool.addCommand(cmd)
 
         if self.__quiet:
             self.__pool.join()
         else:
-            base.join_and_indicate_progress(self.__pool)
+            base.join_and_indicate_log_files_progress(self.__pool, log_files)
 
         validationErrors = []
         for item in self.__pool.getCompletedItems():
@@ -490,8 +507,8 @@ class GpMirrorListToBuild:
         self.__logger.info('Configuring new segments')
         cmds = []
         for hostName in destSegmentByHost.keys():
-            cmds.append(createConfigureNewSegmentCommand(hostName, 'configure blank segments', False))
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "unpacking basic segment directory")
+            cmds.append(createConfigureNewSegmentCommand(hostName, 'configure blank segments', False, log_files, i))
+        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "unpacking basic segment directory", suppressErrorCheck=False, log_files=log_files)
 
         #
         # copy dump files from old segment to new segment
@@ -708,7 +725,7 @@ class GpMirrorListToBuild:
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
             cmd = gp.ConfigureNewSegment("update gpid file",
                                          segmentInfo,
-                                         gplog.get_logger_dir(),
+                                         '%s/%s' % (gplog.get_logger_dir(), 'a-filepath'), # todo needs to be a real filepath. also is this method used anywhere?
                                          newSegments=False,
                                          verbose=gplog.logging_is_verbose(),
                                          batchSize=self.__parallelDegree,

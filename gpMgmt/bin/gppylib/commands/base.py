@@ -25,6 +25,9 @@ import subprocess
 import sys
 import time
 
+from subprocess import Popen
+from subprocess import PIPE
+
 from gppylib import gplog
 from gppylib import gpsubprocess
 from pygresql.pg import DB
@@ -217,6 +220,41 @@ def join_and_indicate_progress(pool, outfile=sys.stdout, interval=1):
         outfile.write('.')
         outfile.flush()
         printed = True
+
+    if printed:
+        outfile.write('\n')
+
+
+def join_and_indicate_log_files_progress(pool, log_files, outfile=sys.stdout, interval=1):
+    """
+    Waits for a WorkerPool to complete its work, flushing dots to stdout every
+    second. If any dots are printed (i.e. the work takes longer than the
+    printing interval), a newline is also printed upon completion.
+
+    The file to print to and the interval between printings can be overridden.
+    """
+    printed = False
+
+    while not pool.join(interval):
+        aggregate = []
+        for i in range(len(log_files)):
+            aggregate.append('')
+
+        i = 0
+        for log_file in log_files:
+            tail_cmd = 'tail -1 %s' % log_file['log_file']
+            cmd = "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 %s" % log_file['host_name']
+            cmd = cmd.split(' ')
+            cmd.append(". /usr/local/gpdb/greenplum_path.sh; %s" % tail_cmd)
+            # todo: we should use a worker pool
+            command_output = Popen(cmd, stdout=PIPE).stdout.read().strip()
+            aggregate[i] = command_output
+            i += 1
+
+        outfile.write('\n'.join(aggregate)) # write the last string between \r's
+        outfile.flush()
+        printed = True
+        time.sleep(3)
 
     if printed:
         outfile.write('\n')
