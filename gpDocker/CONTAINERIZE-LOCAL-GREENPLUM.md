@@ -28,6 +28,10 @@
 ## ssh from one container to another
 `ssh gpadmin@172.18.0.2`
 
+# known issues
+* there is contention for the port 15432 when starting multiple containers on the same host
+    - a potential fix is to pass a PGPORT env var when doing a docker run command (`EXPOSE 15432` could then be removed from the Dockerfile)
+
 # TODO
 0. Create a script that sets up a multi host cluster that matches the concourse cluster provisioner cluster
 1. Explore ways to quickly and reliably update running containers' code from the host while developing
