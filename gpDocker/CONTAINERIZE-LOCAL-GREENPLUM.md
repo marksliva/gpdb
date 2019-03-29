@@ -11,7 +11,7 @@
 `docker run --rm --network=gpdb_cluster_network -p 22 -p 15432 -t gpdb1`
 
 ## if you want the container to be automatically deleted when you ctrl-c, run this instead:
-`docker run --rm --network=gpdb_cluster_network -p 22 -p 15432 -it gpdb1 /bin/bash`
+`docker run -e MASTER_PORT=30000 -e STANDBY_PORT=31000 PORT_BASE=29000 --rm --network=gpdb_cluster_network -p 22 -p 30000 -t gpdb1`
 
 ## list the running images to get the postgres and ssh ports
 `docker ps`

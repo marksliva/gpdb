@@ -31,6 +31,4 @@ RUN cat gpDocker/sysctl-conf >> /etc/sysctl.conf
 RUN cat gpDocker/limits-conf >> /etc/security/limits.conf
 RUN cat gpDocker/ld-so-conf >> /etc/ld.so.conf
 
-EXPOSE 15432
-
 ENTRYPOINT [ "/gpdb_src/gpDocker/create-demo-cluster.sh" ]
