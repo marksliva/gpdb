@@ -12,9 +12,13 @@ function gen_env(){
 		BEHAVE_FLAGS="${BEHAVE_FLAGS}"
 
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
+
 		cd "\${1}/gpdb_src/gpAux"
 		source gpdemo/gpdemo-env.sh
+
 		cd "\${1}/gpdb_src/gpMgmt/"
+		pip install -r requirements-dev.txt
+
 		if [ ! -z "\${BEHAVE_TAGS}" ]; then
 		    make -f Makefile.behave behave tags=\${BEHAVE_TAGS}
 		else

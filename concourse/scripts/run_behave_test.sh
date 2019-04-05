@@ -17,5 +17,7 @@ if gpstate > /dev/null 2>&1 ; then
   gpconfig --skipvalidation -c fsync -v off
   gpstop -u
 fi
+
 cd /home/gpadmin/gpdb_src/gpMgmt
+pip install -r requirements-dev.txt
 make -f Makefile.behave behave flags="$BEHAVE_FLAGS"
