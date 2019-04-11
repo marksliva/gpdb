@@ -1,6 +1,7 @@
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
-include $(top_builddir)/gpMgmt/Makefile.behave
+GPMGMT_SRC=$(CURDIR)
+PEXPECT_LIB=$(GPHOME)/bin/lib
 
 #---------------------------------------------------------------------
 # Set Version
@@ -130,6 +131,29 @@ install: generate_greenplum_path_file
 	rm -rf $(DESTDIR)$(prefix)/bin/gpload_test
 	rm -rf $(DESTDIR)$(prefix)/bin/README*
 	find $(DESTDIR)$(prefix)/lib/python/gppylib -name test -type d | xargs rm -rf
+
+# To pass in custom flags as behave args(such as multiple flags),
+# use flags=--tags=foo, --tags=-bar
+behave:
+	@which behave || (echo "behave not found. Run pip install -r gpMgmt/requirements-dev.txt" && exit 1)
+	@echo "Running behave on management scripts..."
+	@if [ -n """$(flags)""" ]; then \
+		which behave;\
+		behave --version;\
+		source $(GPHOME)/lib/python/bin/activate; \
+		behave $(GPMGMT_SRC)/test/behave/* -s -k $(flags) 2>&1 ; \
+	elif [ -n """$(tags)""" ]; then \
+		PYTHONPATH=$(GPMGMT_SRC):$(PEXPECT_LIB) behave $(GPMGMT_SRC)/test/behave/* -s -k --tags=$(tags) 2>&1 ; \
+	else \
+		echo "Please specify tags=tagname or flags=[behave flags]"; \
+		exit 1; \
+	fi
+
+setup_behave_env:
+	pip install virtualenv && \
+	virtualenv $(GPHOME)/lib/python && \
+	source $(GPHOME)/lib/python/bin/activate && \
+	pip install -r requirements-dev.txt
 
 clean distclean:
 	$(MAKE) -C bin $@
