@@ -3,8 +3,19 @@
 ## create a user-defined network for the cluster
 `docker network create --driver bridge gpdb_cluster_network`
 
+## build a multinode container in the repo root
+`docker build --no-cache -t gpdb-multihost -f multihost.Dockerfile .`
+
+## run a multi node cluster
+```
+docker run --name=mdw --hostname=mdw -v `pwd`:/gpdb --network=gpdb_cluster_network -p 22 -t gpdb-multihost
+docker run --name=sdw1 --hostname=sdw1 -v `pwd`:/gpdb --network=gpdb_cluster_network -p 22 -t gpdb-multihost
+docker run --name=sdw2 --hostname=sdw2 -v `pwd`:/gpdb --network=gpdb_cluster_network -p 22 -t gpdb-multihost
+docker run --name=sdw3 --hostname=sdw3 -v `pwd`:/gpdb --network=gpdb_cluster_network -p 22 -t gpdb-multihost
+```
+
 ## build the container in the repo root
-`docker build --no-cache -t gpdb1 .`
+`docker build --no-cache -t gpdb1 -f demo_cluster.Dockerfile .`
 - if you see an error during the `make install` step, run `git clean -dfx` and try again
 
 ## run on the user-defined network and expose the ssh and PGPORT ports
