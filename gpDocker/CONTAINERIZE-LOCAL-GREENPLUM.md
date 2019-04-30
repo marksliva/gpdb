@@ -6,12 +6,25 @@
 ## build a multinode container in the repo root
 `docker build --no-cache -t gpdb-multihost -f multihost.Dockerfile .`
 
-## run a multi node cluster
+## run a multi node cluster from the greenplum repo
 ```
 docker run --name=mdw --hostname=mdw -v `pwd`:/gpdb --network=gpdb_cluster_network -p 22 -t gpdb-multihost
 docker run --name=sdw1 --hostname=sdw1 -v `pwd`:/gpdb --network=gpdb_cluster_network -p 22 -t gpdb-multihost
 docker run --name=sdw2 --hostname=sdw2 -v `pwd`:/gpdb --network=gpdb_cluster_network -p 22 -t gpdb-multihost
 docker run --name=sdw3 --hostname=sdw3 -v `pwd`:/gpdb --network=gpdb_cluster_network -p 22 -t gpdb-multihost
+```
+
+## set up 1-N ssh from mdw
+```
+docker exec -it mdw /bin/bash
+su gpadmin
+
+ssh-keyscan -t rsa sdw1 >> ~/.ssh/known_hosts
+ssh-keyscan -t rsa sdw2 >> ~/.ssh/known_hosts
+ssh-keyscan -t rsa sdw3 >> ~/.ssh/known_hosts
+sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw1:~/.ssh/authorized_keys
+sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw2:~/.ssh/authorized_keys
+sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw3:~/.ssh/authorized_keys
 ```
 
 ## build the container in the repo root

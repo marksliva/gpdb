@@ -1,6 +1,6 @@
 FROM pivotaldata/ubuntu-gpdb-dev:16.04_gcc_6_3
 
-RUN apt-get update && apt-get install -y openssh-server
+RUN apt-get update && apt-get install -y openssh-server sshpass
 
 RUN mkdir /var/run/sshd
 RUN echo 'root:nicepassword' | chpasswd
@@ -10,11 +10,7 @@ RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so
 ENV NOTVISIBLE "in users profile"
 RUN echo "export VISIBLE=now" >> /etc/profile
 EXPOSE 22
-CMD ["/usr/sbin/sshd", "-D"]
 
-COPY . /gpdb_src
-
-RUN /gpdb_src/concourse/scripts/setup_gpadmin_user.bash
-RUN usermod -aG sudo gpadmin
+WORKDIR /gpdb
 
 ENTRYPOINT [ "/gpdb/gpDocker/start-multihost.sh" ]
