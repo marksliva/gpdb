@@ -4,17 +4,30 @@
 `docker network create --driver bridge gpdb_cluster_network`
 
 # Multi host vagrant vm:
+
+### Requirements
+* Install these tools before creating the vagrant vm:
+    * virtualbox
+    * vagrant
+    * vagrant-disksize plugin: `vagrant plugin install vagrant-disksize`
+
 ## create the VM (automatically starts up the cluster)
 ```
-cd src/tools/vagrant/multi-host-ubuntu/
+cd ~/workspace/gpdb-local-cluster/src/tools/vagrant/multi-host-ubuntu/
 GPDB_REPO=~/workspace/gpdb-local-cluster vagrant up multi_host_ubuntu
 ```
 - note: the shared directory GPDB_REPO will be mounted at /gpdb on the vm and all hosts in the cluster
 ## connect to the VM
 `vagrant ssh multi_host_ubuntu`
 
-## ssh into mdw
-`docker exec -it mdw /bin/bash`
+## ssh into mdw and run behave tests
+```
+docker exec -it mdw /bin/bash
+su gpadmin
+source /gpdb/src/tools/vagrant/multi-host-ubuntu/gpdb-env.sh
+cd /gpdb/gpMgmt
+make -f Makefile.behave behave flags='--tags gpmovemirrors --tags concourse_cluster'
+```
 
 ## destroy the vm
 `vagrant destroy -f multi_host_ubuntu`

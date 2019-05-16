@@ -3,6 +3,7 @@
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/bionic64"
 
+  config.disksize.size = "30GB"
   # Make it so that network access from the vagrant guest is able to
   # use SSH private keys that are present on the host without copying
   # them into the VM.

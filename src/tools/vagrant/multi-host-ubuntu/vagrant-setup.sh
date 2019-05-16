@@ -46,4 +46,4 @@ chown -R vagrant:vagrant /usr/local
 
 docker run hello-world
 
-source /gpdb/src/tools/vagrant/multi-host-ubuntu/multi-host-cluster-create.sh
+source /gpdb/src/tools/vagrant/multi-host-ubuntu/create-multi-host-cluster.sh

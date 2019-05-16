@@ -8,7 +8,7 @@ su gpadmin -c '
 
     hostname > gpAux/gpdemo/hostfile
 
-    source /opt/gpdb/greenplum_path.sh
+    source /usr/local/gpdb/greenplum_path.sh
     make create-demo-cluster
     source gpAux/gpdemo/gpdemo-env.sh
 
