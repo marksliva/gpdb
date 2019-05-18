@@ -27,8 +27,8 @@ RUN chown -R gpadmin:gpadmin /usr/local/gpdb
 RUN chown -R gpadmin:gpadmin /gpdb_src
 RUN chown -R gpadmin:gpadmin /etc/ssh/
 
-RUN cat gpDocker/sysctl-conf >> /etc/sysctl.conf
-RUN cat gpDocker/limits-conf >> /etc/security/limits.conf
-RUN cat gpDocker/ld-so-conf >> /etc/ld.so.conf
+RUN cat src/tools/vagrant/multi-host-ubuntu/docker/sysctl-conf >> /etc/sysctl.conf
+RUN cat src/tools/vagrant/multi-host-ubuntu/docker/limits-conf >> /etc/security/limits.conf
+RUN cat src/tools/vagrant/multi-host-ubuntu/docker/ld-so-conf >> /etc/ld.so.conf
 
-ENTRYPOINT [ "/gpdb_src/gpDocker/create-demo-cluster.sh" ]
+ENTRYPOINT [ "/gpdb_src/src/tools/vagrant/multi-host-ubuntu/docker/create-demo-cluster.sh" ]

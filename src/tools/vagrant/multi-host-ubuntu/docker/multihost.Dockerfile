@@ -30,9 +30,9 @@ RUN chown -R gpadmin:gpadmin /data
 RUN chown -R gpadmin:gpadmin /usr/local/gpdb
 RUN chown -R gpadmin:gpadmin /etc/ssh/
 
-RUN cat gpDocker/sysctl-conf >> /etc/sysctl.conf
-RUN cat gpDocker/limits-conf >> /etc/security/limits.conf
-RUN cat gpDocker/ld-so-conf >> /etc/ld.so.conf
+RUN cat src/tools/vagrant/multi-host-ubuntu/docker/sysctl-conf >> /etc/sysctl.conf
+RUN cat src/tools/vagrant/multi-host-ubuntu/docker/limits-conf >> /etc/security/limits.conf
+RUN cat src/tools/vagrant/multi-host-ubuntu/docker/ld-so-conf >> /etc/ld.so.conf
 
 RUN pip install -r /gpdb_src/gpMgmt/requirements-dev.txt
 
@@ -41,4 +41,4 @@ WORKDIR /gpdb
 # changes and building during development should happen in /gpdb which syncs from the host
 RUN rm -rf /gpdb_src
 
-ENTRYPOINT [ "/gpdb/gpDocker/start-multihost.sh" ]
+ENTRYPOINT [ "/gpdb/src/tools/vagrant/multi-host-ubuntu/docker/start-multihost.sh" ]

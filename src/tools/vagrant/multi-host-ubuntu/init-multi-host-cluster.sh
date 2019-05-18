@@ -5,22 +5,22 @@ set -ex
 # when running `docker exec -u gpadmin ...`
 export USER=gpadmin
 
-pushd /gpdb
-    ssh-keyscan -t rsa sdw1 >> ~/.ssh/known_hosts
-    ssh-keyscan -t rsa sdw2 >> ~/.ssh/known_hosts
-    ssh-keyscan -t rsa sdw3 >> ~/.ssh/known_hosts
-    ssh-keyscan -t rsa mdw >> ~/.ssh/known_hosts
+cd /gpdb
 
-    sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw1:~/.ssh/authorized_keys
-    sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw2:~/.ssh/authorized_keys
-    sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw3:~/.ssh/authorized_keys
-    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+ssh-keyscan -t rsa sdw1 >> ~/.ssh/known_hosts
+ssh-keyscan -t rsa sdw2 >> ~/.ssh/known_hosts
+ssh-keyscan -t rsa sdw3 >> ~/.ssh/known_hosts
+ssh-keyscan -t rsa mdw >> ~/.ssh/known_hosts
 
-    source /gpdb/src/tools/vagrant/multi-host-ubuntu/gpdb-env.sh
+sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw1:~/.ssh/authorized_keys
+sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw2:~/.ssh/authorized_keys
+sshpass -p password scp ~/.ssh/id_rsa.pub gpadmin@sdw3:~/.ssh/authorized_keys
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 
-    gpssh-exkeys -f /gpdb/src/tools/vagrant/multi-host-ubuntu/all_hosts_list
+source src/tools/vagrant/multi-host-ubuntu/gpdb-env.sh
 
-    gpinitsystem -a -c /gpdb/src/tools/vagrant/multi-host-ubuntu/gpinitsystem_config
+gpssh-exkeys -f src/tools/vagrant/multi-host-ubuntu/all_hosts_list
 
-    createdb gptest
-popd
+gpinitsystem -a -c src/tools/vagrant/multi-host-ubuntu/gpinitsystem_config
+
+createdb gptest
