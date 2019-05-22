@@ -161,27 +161,6 @@ class CompareSegmentGucTest(GpTestCase):
             with self.assertRaises(MultiValueGuc.ParseError):
                 MultiValueGuc._unquote(quoted)
 
-    # def test_is_internally_consistent_when_file_value_is_quoted(self):
-    #     file_seg_guc = FileSegmentGuc(['contentid', 'guc_name', "'value'", "dbid"])
-    #     db_seg_guc = DatabaseSegmentGuc(['contentid', 'guc_name', 'value'])
-    #
-    #     subject = MultiValueGuc(file_seg_guc, db_seg_guc)
-    #     self.assertEquals(subject.is_internally_consistent(), True)
-    #
-    # def test_is_internally_consistent_when_file_value_is_quoted_and_empty(self):
-    #     file_seg_guc = FileSegmentGuc(['contentid', 'guc_name', "''", "dbid"])
-    #     db_seg_guc = DatabaseSegmentGuc(['contentid', 'guc_name', ''])
-    #
-    #     subject = MultiValueGuc(file_seg_guc, db_seg_guc)
-    #     self.assertEquals(subject.is_internally_consistent(), True)
-    #
-    # def test_is_internally_consistent_when_live_value_has_a_newline(self):
-    #     file_seg_guc = FileSegmentGuc(['contentid', 'guc_name', "'\\n'", "dbid"])
-    #     db_seg_guc = DatabaseSegmentGuc(['contentid', 'guc_name', '\n'])
-    #
-    #     subject = MultiValueGuc(file_seg_guc, db_seg_guc)
-    #     self.assertEquals(subject.is_internally_consistent(), True)
-
     def test_set_file_segment_succeeds(self):
         row = ['contentid', 'guc_name', 'file_value', "diff_dbid"]
         file_seg_guc = FileSegmentGuc(row)
