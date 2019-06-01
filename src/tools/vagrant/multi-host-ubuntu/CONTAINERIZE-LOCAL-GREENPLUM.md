@@ -15,12 +15,13 @@ including ones tagged with `@concourse_cluster` on a developer machine.
 ## Create the VM and multi-host cluster
 ```
 cd ~/workspace/gpdb-local-cluster/src/tools/vagrant/multi-host-ubuntu/
-GPDB_REPO=~/workspace/gpdb-local-cluster vagrant up multi_host_ubuntu
+export GPDB_MULTI_HOST_NAME=gpdb_multi_host_dev
+GPDB_REPO=~/workspace/gpdb-local-cluster vagrant up
 ```
 - note: the shared directory GPDB_REPO will be mounted at /gpdb on the vm and all hosts in the cluster
 
 ## Connect to the VM
-`vagrant ssh multi_host_ubuntu`
+`vagrant ssh $GPDB_MULTI_HOST_NAME`
 
 ## SSH into mdw and run behave tests
 ```
@@ -32,4 +33,4 @@ make -f Makefile.behave behave flags='--tags gpmovemirrors --tags concourse_clus
 ```
 
 ## Destroy the VM
-`vagrant destroy -f multi_host_ubuntu`
+`vagrant destroy -f $GPDB_MULTI_HOST_NAME`

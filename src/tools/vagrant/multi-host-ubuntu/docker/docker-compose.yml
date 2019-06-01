@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  mdw:
+    container_name: mdw
+    hostname: mdw
+    image: gpdb-multihost
+    volumes:
+      - /gpdb:/gpdb
+    networks:
+      - gpdb_cluster_network
+  sdw1:
+    container_name: sdw1
+    hostname: sdw1
+    image: gpdb-multihost
+    volumes:
+      - /gpdb:/gpdb
+    networks:
+      - gpdb_cluster_network
+  sdw2:
+    container_name: sdw2
+    hostname: sdw2
+    image: gpdb-multihost
+    volumes:
+      - /gpdb:/gpdb
+    networks:
+      - gpdb_cluster_network
+  sdw3:
+    container_name: sdw3
+    hostname: sdw3
+    image: gpdb-multihost
+    volumes:
+      - /gpdb:/gpdb
+    networks:
+      - gpdb_cluster_network
+
+networks:
+  gpdb_cluster_network:
+    driver: bridge
