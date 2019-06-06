@@ -58,6 +58,14 @@ cd ./coverage/
 # gpdb_src.
 cat > .coveragerc <<EOF
 [paths]
+install =
+    /usr/local/greenplum-db-devel/bin
+    /tmp/build/*/gpdb_src/gpMgmt/bin
+
+install_lib =
+    /usr/local/greenplum-db-devel/lib/python/gppylib
+    /tmp/build/*/gpdb_src/gpMgmt/bin/gppylib
+
 source =
     $CWD/gpdb_src
     /home/*/gpdb_src
