@@ -10,13 +10,14 @@
 #
 set -ex
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 COVERAGE_BUCKET_URI"
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 COVERAGE_BUCKET_URI COVERAGE_BUCKET_NAME"
     exit 1
 fi
 
 # Trim any trailing slash from the bucket name.
-BUCKET="${1%/}"
+BUCKET_URI="${1%/}"
+BUCKET_NAME=$2
 CWD=$(pwd)
 read -r COMMIT_SHA < gpdb_src/.git/HEAD
 
@@ -46,7 +47,7 @@ export BOTO_CONFIG=$(pwd)/boto.cfg
 
 # Pull down the coverage data for our current commit.
 mkdir ./coverage
-gsutil -m rsync -r "$BUCKET/$COMMIT_SHA" ./coverage
+gsutil -m rsync -r "$BUCKET_URI/$COMMIT_SHA" ./coverage
 
 cd ./coverage/
 
@@ -93,5 +94,6 @@ find . -name '*.coverage.*' -print0 | xargs -0 coverage combine --append
 # publicly readable, to make it easy to browse the HTML. They're also gzipped to
 # save on storage (see the -Z option for `gsutil cp`).
 coverage html -d ./html
-gsutil -m cp -rZ -a public-read ./html/* "$BUCKET/$COMMIT_SHA/html"
+gsutil -m cp -rZ -a public-read ./html/* "$BUCKET_URI/$COMMIT_SHA/html"
 coverage report
+echo "View the full coverage report: https://storage.googleapis.com/$BUCKET_NAME/$COMMIT_SHA/html/index.html"
