@@ -45,5 +45,5 @@ run:
         done
 
         # Compress coverage files and remove the originals
-        tar --remove-files -czf "$TEST_NAME.tgz" *
+        tar --remove-files -czf "ccp-cluster-$TEST_NAME.tgz" *
     popd
