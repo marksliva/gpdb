@@ -44,4 +44,7 @@ EOF
 export BOTO_CONFIG=$(pwd)/boto.cfg
 
 pip install gsutil
-gsutil -m cp -rZ "$1"/* "$2"
+
+# Trim a trailing slash from the source directory if it has one
+SOURCE_DIRECTORY="${1%/}"
+gsutil -m cp -rZ "$SOURCE_DIRECTORY/*" "$2"
