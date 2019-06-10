@@ -1464,7 +1464,7 @@ jobs:
         - name: coverage
       run:
         path: gpdb_src/concourse/scripts/gsutil_sync
-        args: [ "./coverage/", "gs://((coverage-bucket-name))/" ]
+        args: [ "./coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
       params:
         JSON_KEY: ((concourse-gcs-resources-service-account-key))
 
@@ -1521,7 +1521,7 @@ jobs:
               - name: ccp-coverage
             run:
               path: gpdb_src/concourse/scripts/gsutil_sync
-              args: [ "./ccp-coverage/", "gs://((coverage-bucket-name))/" ]
+              args: [ "./ccp-coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
             params:
               JSON_KEY: ((concourse-gcs-resources-service-account-key))
       {% endif %}
@@ -1547,7 +1547,7 @@ jobs:
               - name: demo-coverage
             run:
               path: gpdb_src/concourse/scripts/gsutil_sync
-              args: [ "./demo-coverage/", "gs://((coverage-bucket-name))/" ]
+              args: [ "./demo-coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
             params:
               JSON_KEY: ((concourse-gcs-resources-service-account-key))
 
@@ -1578,7 +1578,7 @@ jobs:
           - name: bin_gpdb
         run:
           path: gpdb_src/concourse/scripts/combine_cli_coverage.bash
-          args: [ "gs://((coverage-bucket-name))/" ]
+          args: [ "gs://((coverage-bucket-name))/((pipeline-name))/" ]
         params:
           JSON_KEY: ((concourse-gcs-resources-service-account-key))
 
