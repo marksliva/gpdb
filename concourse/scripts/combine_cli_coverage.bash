@@ -52,7 +52,7 @@ gsutil -m rsync -r "$BUCKET_URI/$COMMIT_SHA" ./coverage
 cd ./coverage/
 
 # Extract the raw coverage files
-tar -xf *.tgz
+find . -name '*.tgz' -exec tar -xf {} \;
 
 # Installing GPDB gets most of the source we need, but Python sources that were
 # inside the Git repo when they executed will be in a different location on this
