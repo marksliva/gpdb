@@ -43,4 +43,7 @@ run:
         for f in *; do
             mv "$f" "$TEST_NAME.$f"
         done
+
+        # Compress coverage files and remove the originals
+        tar --remove-files -czf "$TEST_NAME.tgz" *
     popd

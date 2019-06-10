@@ -167,5 +167,8 @@ function prepare_coverage() {
         for f in *; do
             mv "$f" "$prefix.$f"
         done
+
+        # Compress coverage files and remove the originals
+        tar --remove-files -czf "$prefix.tgz" *
     popd
 }
