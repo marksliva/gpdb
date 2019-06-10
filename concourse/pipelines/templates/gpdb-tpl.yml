@@ -1466,7 +1466,7 @@ jobs:
         path: gpdb_src/concourse/scripts/gsutil_sync
         args: [ "./coverage/", "gs://((coverage-bucket-name))/" ]
       params:
-        JSON_KEY: {{coverage-bucket-service-account-key}}
+        JSON_KEY: ((concourse-gcs-resources-service-account-key))
 
 {% for test in CLI_BEHAVE_TESTS %}
 - name: [[ test.name ]]
@@ -1523,7 +1523,7 @@ jobs:
               path: gpdb_src/concourse/scripts/gsutil_sync
               args: [ "./ccp-coverage/", "gs://((coverage-bucket-name))/" ]
             params:
-              JSON_KEY: {{coverage-bucket-service-account-key}}
+              JSON_KEY: ((concourse-gcs-resources-service-account-key))
       {% endif %}
       - do:
         - get: bin_gpdb
@@ -1549,7 +1549,7 @@ jobs:
               path: gpdb_src/concourse/scripts/gsutil_sync
               args: [ "./demo-coverage/", "gs://((coverage-bucket-name))/" ]
             params:
-              JSON_KEY: {{coverage-bucket-service-account-key}}
+              JSON_KEY: ((concourse-gcs-resources-service-account-key))
 
 {% endfor %}
 
@@ -1580,7 +1580,7 @@ jobs:
           path: gpdb_src/concourse/scripts/combine_cli_coverage.bash
           args: [ "gs://((coverage-bucket-name))/" ]
         params:
-          JSON_KEY: {{coverage-bucket-service-account-key}}
+          JSON_KEY: ((concourse-gcs-resources-service-account-key))
 
 {% if "centos6" in os_types and "ICW" in test_sections %}
 - name: pg_upgrade
