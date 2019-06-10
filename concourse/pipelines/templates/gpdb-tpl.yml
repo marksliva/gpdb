@@ -1454,6 +1454,7 @@ jobs:
     image: gpdb6-centos6-test
     params:
       TEST_OS: centos
+      TEST_NAME: gpmgmt_unit_tests
   - task: publish_coverage
     image: gpdb6-centos7-test
     config:
