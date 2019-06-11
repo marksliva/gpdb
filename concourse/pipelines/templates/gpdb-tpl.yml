@@ -1578,7 +1578,7 @@ jobs:
           - name: bin_gpdb
         run:
           path: gpdb_src/concourse/scripts/combine_cli_coverage.bash
-          args: [ "gs://((coverage-bucket-name))/((pipeline-name))/" ]
+          args: [ "gs://((coverage-bucket-name))/((pipeline-name))/", "((coverage-bucket-name))/((pipeline-name))" ]
         params:
           JSON_KEY: ((concourse-gcs-resources-service-account-key))
 

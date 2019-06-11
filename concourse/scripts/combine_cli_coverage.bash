@@ -11,13 +11,13 @@
 set -ex
 
 if [ $# -ne 2 ]; then
-    echo "Usage: $0 COVERAGE_BUCKET_URI COVERAGE_BUCKET_NAME"
+    echo "Usage: $0 COVERAGE_BUCKET_URI COVERAGE_BUCKET_PATH"
     exit 1
 fi
 
 # Trim any trailing slash from the bucket uri.
 BUCKET_URI="${1%/}"
-BUCKET_NAME=$2
+BUCKET_PATH=$2
 CWD=$(pwd)
 read -r COMMIT_SHA < gpdb_src/.git/HEAD
 
@@ -99,4 +99,4 @@ find . -name '*.coverage.*' -print0 | xargs -0 coverage combine --append
 coverage html -d ./html
 gsutil -m cp -rZ -a public-read ./html/* "$BUCKET_URI/$COMMIT_SHA/html"
 coverage report
-echo "View the full coverage report: https://storage.googleapis.com/$BUCKET_NAME/$COMMIT_SHA/html/index.html"
+echo "View the full coverage report: https://storage.googleapis.com/$BUCKET_PATH/$COMMIT_SHA/html/index.html"
