@@ -207,6 +207,7 @@ groups:
   - icw_gporca_centos6
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
+  - fips_centos6
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - gpexpand
@@ -321,6 +322,7 @@ groups:
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
   - compile_gpdb_centos6
+  - fips_centos6
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - pg_upgrade
@@ -1432,6 +1434,47 @@ jobs:
         CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
+
+{% if "centos6" in os_types %}
+- name: fips_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: true
+    - get: ccp_src
+    - get: ccp-image
+  - put: terraform
+    params:
+      action: create
+      delete_on_failure: true
+      generate_random_name: true
+      terraform_source: ccp_src/google/
+      vars:
+        PLATFORM: "centos6-fips"
+        instance_type: n1-standard-2
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: clusters-google/
+      BUCKET_NAME: {{tf-bucket-name}}
+      CLOUD_PROVIDER: google
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: test_fips
+    file: gpdb_src/concourse/tasks/test_fips.yml
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+{% endif %}
+
 - name: gate_icw_end
   plan:
   - in_parallel:
