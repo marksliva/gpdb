@@ -146,13 +146,13 @@ CREATE_QES_PRIMARY () {
     $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO \"#----------------------\" >> ${GP_DIR}/$PG_CONF"
     RETVAL=$?
     PARA_EXIT $RETVAL "Update ${GP_DIR}/$PG_CONF file"
-    SED_PG_CONF ${GP_DIR}/$PG_CONF "$PORT_TXT" port=$GP_PORT 0 $GP_HOSTADDRESS
+    SED_PG_CONF ${GP_DIR}/$PG_CONF "$PORT_TXT" port=$GP_PORT 0 $GP_HOSTADDRESS 2
     PARA_EXIT $RETVAL "Update port number to $GP_PORT"
-    SED_PG_CONF ${GP_DIR}/$PG_CONF "$LISTEN_ADR_TXT" listen_addresses=\'*\' 0 $GP_HOSTADDRESS
+    SED_PG_CONF ${GP_DIR}/$PG_CONF "$LISTEN_ADR_TXT" listen_addresses=\'*\' 0 $GP_HOSTADDRESS 2
     PARA_EXIT $RETVAL "Update listen address"
-    SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=${GP_CONTENT}" 0 $GP_HOSTADDRESS
+    SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=${GP_CONTENT}" 0 $GP_HOSTADDRESS 2
     PARA_EXIT $RETVAL "Update gp_contentid"
-    SED_PG_CONF ${GP_DIR}/$PG_INTERNAL_CONF "$DBID_TXT" "gp_dbid=${GP_DBID}" 0 $GP_HOSTADDRESS
+    SED_PG_CONF ${GP_DIR}/$PG_INTERNAL_CONF "$DBID_TXT" "gp_dbid=${GP_DBID}" 0 $GP_HOSTADDRESS 2
     PARA_EXIT $RETVAL "Update gp_dbid"
     
     if [ x"" != x"$PG_CONF_ADD_FILE" ]; then
@@ -161,7 +161,7 @@ CREATE_QES_PRIMARY () {
         do
             LOG_MSG "[INFO][$INST_COUNT]:-Adding config $NEW_PARAM to segment"
             SEARCH_TXT=`$ECHO $NEW_PARAM |$CUT -d"=" -f1`
-            SED_PG_CONF ${GP_DIR}/$PG_CONF $SEARCH_TXT $NEW_PARAM 0 $GP_HOSTADDRESS
+            SED_PG_CONF ${GP_DIR}/$PG_CONF $SEARCH_TXT $NEW_PARAM 0 $GP_HOSTADDRESS 2
             PARA_EXIT $RETVAL "Update $PG_CONF $SEARCH_TXT $NEW_PARAM"
         done
     fi

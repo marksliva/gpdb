@@ -311,7 +311,8 @@ SED_PG_CONF () {
 	SEARCH_TXT=$1;shift
 	SUB_TXT="$1";shift
 	KEEP_PREV=$1;shift
-	SED_HOST=$1
+	SED_HOST=$1;shift
+	ERROR_EXIT_CODE=$1
 	if [ x"" == x"$SED_HOST" ]; then
 			if [ `$GREP -c "${SEARCH_TXT}[ ]*=" $FILENAME` -gt 1 ]; then
 				LOG_MSG "[INFO]:-Found more than 1 instance of $SEARCH_TXT in $FILENAME, will append" 1
