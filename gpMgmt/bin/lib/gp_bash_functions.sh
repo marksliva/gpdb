@@ -14,11 +14,7 @@
 #Check that SHELL is Bash
 if [ -z $BASH ]; then
 	echo "[FATAL]:-Scripts must be executed using the Bash shell"
-	if [ $IGNORE_WARNINGS -eq 1 ]; then
-		exit 1
-	else
-		exit 2
-	fi
+	exit 2
 fi
 #CMDPATH is the list of locations to search for commands, in precedence order
 declare -a CMDPATH
@@ -31,11 +27,7 @@ if [ ${#GPPATH[@]} -eq 0 ];then
 	echo "[FATAL]:-GPHOME environment variable is required to run GPDB but could not be found."
 	echo "Please set it by sourcing the  greenplum_path.sh  in your GPDB installation directory."
 	echo "Example: ''. /usr/local/gpdb/greenplum_path.sh''"
-	if [ $IGNORE_WARNINGS -eq 1 ]; then
-		exit 1
-	else
-		exit 2
-	fi
+	exit 2
 fi
 
 #GP_UNIQUE_COMMAND is used to identify the binary directory
@@ -130,11 +122,7 @@ PSQLBIN=`findMppPath`
 if [ x"$PSQLBIN" = x"" ];then
 		echo "Problem in gp_bash_functions, command '$GP_UNIQUE_COMMAND' not found in Greenplum path."
 		echo "Try setting GPHOME to the location of your Greenplum distribution."
-	if [ $IGNORE_WARNINGS -eq 1 ]; then
-		exit 1
-	else
 		exit 99
-	fi
 fi
 
 PSQLBIN=`$DIRNAME $PSQLBIN`
@@ -227,16 +215,10 @@ LOG_MSG () {
 		level=${1%%]*}
 		case "$level" in
 		*WARN*)
-			if [ $IGNORE_WARNINGS -ne 1 ]; then
-				EXIT_STATUS=1
-			fi
+			EXIT_STATUS=1
 			;;
 		*FATAL*)
-			if [ $IGNORE_WARNINGS -eq 1 ]; then
-				EXIT_STATUS=1
-			else
-				EXIT_STATUS=2
-			fi
+			EXIT_STATUS=2
 			;;
 		esac
 
@@ -266,17 +248,19 @@ POSTGRES_VERSION_CHK() {
 
     VER=`$TRUSTED_SHELL $HOST "$EXPORT_GPHOME; $EXPORT_LIB_PATH; $GPHOME/bin/postgres --gp-version"`
     if [ $? -ne 0 ] ; then
-		LOG_MSG "[WARN]:- Failed to obtain postgres version on $HOST" 1
-		VERSION_MATCH=0
+	LOG_MSG "[WARN]:- Failed to obtain postgres version on $HOST" 1
+	EXIT_STATUS=1
+	VERSION_MATCH=0
     fi
     LOG_MSG "[INFO]:- Current postgres version = $CURRENT_VERSION"
     LOG_MSG "[INFO]:- postgres version on $HOST = $VER"
 
     if [ x"$VER" != x"$CURRENT_VERSION" ] ; then
-		LOG_MSG "[WARN]:-Postgres version does not match. [$CURRENT_VERSION != $VER]" 1
-		VERSION_MATCH=0
+	LOG_MSG "[WARN]:-Postgres version does not match. [$CURRENT_VERSION != $VER]" 1
+	VERSION_MATCH=0
+	EXIT_STATUS=1
     else
-		VERSION_MATCH=1
+	VERSION_MATCH=1
     fi
 
 
@@ -329,6 +313,7 @@ ERROR_CHK () {
 			INITIAL_LEVEL=$DEBUG_LEVEL
 			DEBUG_LEVEL=1
 			LOG_MSG "[WARN]:-Issue with $MSG_TXT"
+			EXIT_STATUS=1
 			DEBUG_LEVEL=$INITIAL_LEVEL
 		else
 			LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -618,20 +603,12 @@ GET_REPLY () {
 	$ECHO -n "> "
 	read REPLY
 	if [ -z $REPLY ]; then
-		LOG_MSG "[WARN]:-User abort requested, Script Exits!" 1
-		if [ $IGNORE_WARNINGS -eq 1 ]; then
-			exit 0
-		else
+		LOG_MSG "[FATAL]:-User abort requested, Script Exits!" 1
 			exit 1
-		fi
 	fi
 	if [ $REPLY != Y ] && [ $REPLY != y ]; then
-		LOG_MSG "[WARN]:-User abort requested, Script Exits!" 1
-		if [ $IGNORE_WARNINGS -eq 1 ]; then
-			exit 0
-		else
+		LOG_MSG "[FATAL]:-User abort requested, Script Exits!" 1
 			exit 1
-		fi
 	fi
 }
 
@@ -690,6 +667,7 @@ CHK_FILE () {
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ];then
 				LOG_MSG "[WARN]:-Failed to obtain details of $FILENAME on $FILE_HOST"
+				EXIT_STATUS=1
 				EXISTS=1
 			fi
 		fi
@@ -708,8 +686,9 @@ CHK_DIR () {
 			EXISTS=`$TRUSTED_SHELL $DIR_HOST "if [ -d $DIR_NAME ];then $ECHO 0;else $ECHO 1;fi"`
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ];then
-				LOG_MSG "[WARN]:-Failed to obtain details of $DIR_NAME on $DIR_HOST" 1
-				EXISTS=1
+			LOG_MSG "[WARN]:-Failed to obtain details of $DIR_NAME on $DIR_HOST" 1
+			EXIT_STATUS=1
+			EXISTS=1
 			fi
 		fi
 		if [ x"" == x"$3" ];then
@@ -956,6 +935,7 @@ ORDER BY 1;" >> $LOG_FILE 2>&1
 				LOG_MSG "[INFO]:-This could mean that the Master instance is in admin mode only" 1
 				LOG_MSG "[INFO]:-Run gpstop -m to shutdown Master instance from admin mode, and restart" 1
 				LOG_MSG "[INFO]:-the Greenplum database using gpstart" 1
+				EXIT_STATUS=1
 			else
 				EXIT_STATUS=0
 			fi
@@ -993,6 +973,7 @@ GET_PG_PID_ACTIVE () {
 				#Have a process but no lock file
 					LOG_MSG "[WARN]:-No lock file $PG_LOCK_FILE but process running on port $PORT" 1
 					PID=1
+					EXIT_STATUS=1
 				fi
 				if [ $PG_LOCK_TMP -eq 1 ] && [ x"" == x"$PG_LOCK_NETSTAT" ];then
 				#Have a lock file but no process
@@ -1003,6 +984,7 @@ GET_PG_PID_ACTIVE () {
 						PID=1
 					fi
 					LOG_MSG "[WARN]:-Have lock file $PG_LOCK_FILE but no process running on port $PORT" 1
+					EXIT_STATUS=1
 				fi
 				if [ $PG_LOCK_TMP -eq 1 ] && [ x"" != x"$PG_LOCK_NETSTAT" ];then
 				#Have both a lock file and a netstat process
@@ -1011,6 +993,7 @@ GET_PG_PID_ACTIVE () {
 					else
 						LOG_MSG "[WARN]:-Unable to access ${PG_LOCK_FILE}" 1
 						PID=1
+						EXIT_STATUS=1
 					fi
 					LOG_MSG "[INFO]:-Have lock file $PG_LOCK_FILE and a process running on port $PORT"
 				fi
@@ -1019,9 +1002,7 @@ GET_PG_PID_ACTIVE () {
 			PING_HOST $HOST 1
 			if [ $RETVAL -ne 0 ];then
 				PID=0
-				if [ $IGNORE_WARNINGS -ne 1 ]; then
-					EXIT_STATUS=1
-				fi
+				EXIT_STATUS=1
 			else
 				PORT_ARRAY=(`$TRUSTED_SHELL $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $NF}'|$AWK -F"." '{print $NF}'|$SORT -u`)
 				for P_CHK in ${PORT_ARRAY[@]}
@@ -1039,6 +1020,7 @@ GET_PG_PID_ACTIVE () {
 					#Have a process but no lock file
 						LOG_MSG "[WARN]:-No lock file $PG_LOCK_FILE but process running on port $PORT on $HOST" 1
 						PID=1
+						EXIT_STATUS=1
 					fi
 					if [ $PG_LOCK_TMP -eq 1 ] && [ x"" == x"$PG_LOCK_NETSTAT" ];then
 					#Have a lock file but no process
@@ -1050,6 +1032,7 @@ GET_PG_PID_ACTIVE () {
 						fi
 						LOG_MSG "[WARN]:-Have lock file $PG_LOCK_FILE but no process running on port $PORT on $HOST" 1
 						PID=1
+						EXIT_STATUS=1
 					fi
 					if [ $PG_LOCK_TMP -eq 1 ] && [ x"" != x"$PG_LOCK_NETSTAT" ];then
 					#Have both a lock file and a netstat process
@@ -1058,6 +1041,7 @@ GET_PG_PID_ACTIVE () {
 							PID=`$TRUSTED_SHELL $HOST "$CAT ${PG_LOCK_FILE}|$HEAD -1 2>/dev/null"|$AWK '{print $1}'`
 						else
 							LOG_MSG "[WARN]:-Unable to access ${PG_LOCK_FILE} on $HOST" 1
+							EXIT_STATUS=1
 						fi
 						LOG_MSG "[INFO]:-Have lock file $PG_LOCK_FILE and a process running on port $PORT on $HOST"
 					fi
@@ -1222,7 +1206,7 @@ PARALLEL_SUMMARY_STATUS_REPORT () {
                 fi
                 LOG_MSG "[INFO]:------------------------------------------------" 1
 	else
-		LOG_MSG "[WARN]:-Could not locate status file $1" 1
+		 LOG_MSG "[WARN]:-Could not locate status file $1" 1
 		REPORT_FAIL=1
 	fi
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"

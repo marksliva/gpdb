@@ -20,26 +20,6 @@
 #******************************************************************************
 # Prep Code
 
-IGNORE_WARNINGS=0
-
-POSITIONAL=()
-while [[ $# -gt 0 ]]
-do
-key="$1"
-
-case $key in
-    --ignore-warnings)
-    IGNORE_WARNINGS=1
-    shift # past argument
-    ;;
-    *)    # next argument
-    POSITIONAL+=("$1") # save it in an array for later
-    shift # past argument
-    ;;
-esac
-done
-set -- "${POSITIONAL[@]}" # restore positional parameters
-
 WORKDIR=`dirname $0`
 
 # Source required functions file, this required for script to run
@@ -51,11 +31,7 @@ if [ -f $FUNCTIONS ]; then
     . $WORKDIR/lib/gp_bash_version.sh
 else
     echo "[FATAL]:-Cannot source $FUNCTIONS file, script Exits!"
-	if [ $IGNORE_WARNINGS -eq 1 ]; then
-		exit 1
-	else
-		exit 2
-	fi
+    exit 2
 fi
 
 #******************************************************************************
@@ -104,6 +80,7 @@ INPUT_CONFIG=""
 OUTPUT_CONFIG=""
 GPHOSTCACHELOOKUP=$WORKDIR/lib/gphostcachelookup.py
 STANDBY_RET_CODE=0
+IGNORE_WARNINGS=0
 
 #******************************************************************************
 # DCA Specific Variables
@@ -138,6 +115,7 @@ USAGE () {
 		$ECHO
 		$ECHO "      General options:"
 		$ECHO "      -v, display version information & exit"
+		$ECHO "      --ignore-warnings, exit with status 0 for warnings and 1 for fatal errors"
 		$ECHO
 		$ECHO "      Logging options:"
 		$ECHO "      -a, don't ask to confirm instance creation [default:- ask]"
@@ -187,14 +165,14 @@ USAGE () {
 		$ECHO
 		$ECHO "      Return codes:"
 		$ECHO "      0 - No problems encountered with requested operation"
-		if [ $IGNORE_WARNINGS -eq 1 ]; then
-			$ECHO "      1 - Fatal error, instance not created/started, or in an inconsistent state,"
-			$ECHO "          see log file for failure reason."
-		else
-			$ECHO "      1 - Warning generated, but instance operational"
-			$ECHO "      2 - Fatal error, instance not created/started, or in an inconsistent state,"
-			$ECHO "          see log file for failure reason."
-		fi
+		$ECHO "      1 - Warning generated, but instance operational"
+		$ECHO "      2 - Fatal error, instance not created/started, or in an inconsistent state,"
+		$ECHO "          see log file for failure reason."
+		$ECHO
+		$ECHO "      Return codes when --ignore-warnings specified:"
+		$ECHO "      0 - No critical problems encountered with requested operation, may have generated warnings."
+		$ECHO "      1 - Fatal error, instance not created/started, or in an inconsistent state,"
+		$ECHO "          see log file for failure reason."
 		$ECHO
 		exit $EXIT_STATUS
 	fi
@@ -358,9 +336,7 @@ CHK_PARAMS () {
 		# Now process contents for the configuration file
 		if [ ! "$ARRAY_NAME" ]; then
 			LOG_MSG "[WARN]:-ARRAY_NAME variable not set, will provide default value" 1
-			if [ $IGNORE_WARNINGS -ne 1 ]; then
-				EXIT_STATUS=1
-			fi
+			EXIT_STATUS=1
 			ARRAY_NAME="Greenplum Instance"
 		fi
 		export ARRAY_NAME
@@ -433,9 +409,7 @@ CHK_PARAMS () {
 		# ENCODING
 		if [ ! $ENCODING ]; then
 			LOG_MSG "[WARN]:-ENCODING variable not set, will set to default UTF-8" 1
-			if [ $IGNORE_WARNINGS -ne 1 ]; then
-				EXIT_STATUS=1
-			fi
+			EXIT_STATUS=1
 			ENCODING="UTF-8"
 		fi
 		if [ x"SQL_ASCII" = x"$ENCODING" ]; then
@@ -500,9 +474,7 @@ CHK_PARAMS () {
 		MASTER_OPEN=`ulimit -n`
 		if [ $MASTER_OPEN -lt $OS_OPENFILES ];then
 			LOG_MSG "[WARN]:-Master open file limit is $MASTER_OPEN should be >= $OS_OPENFILES" 1
-			if [ $IGNORE_WARNINGS -ne 1 ]; then
-				EXIT_STATUS=1
-			fi
+			EXIT_STATUS=1
 			ULIMIT_WARN=1
 		fi
 		# Get IP address of the master host
@@ -522,9 +494,7 @@ CHK_PARAMS () {
 			STANDBY_MASTER_OPEN=`$TRUSTED_SHELL $STANDBY_HOSTNAME "ulimit -n"`
 			if [ $STANDBY_MASTER_OPEN -lt $OS_OPENFILES ];then
 				LOG_MSG "[WARN]:-Standby Master open file limit is $STANDBY_MASTER_OPEN should be >= $OS_OPENFILES" 1
-				if [ $IGNORE_WARNINGS -ne 1 ]; then
-					EXIT_STATUS=1
-				fi
+				EXIT_STATUS=1
 				ULIMIT_WARN=1
 			fi
 		fi
@@ -710,9 +680,7 @@ END_PYTHON_CODE
 	if [ $MIRRORING -eq 0 ] && [ $MIRROR_TYPE -eq 1 ];then
 		LOG_MSG "[WARN]:-Option --mirror-mode supplied, but no mirrors have been defined, ignoring --mirror-mode option" 1
 		MIRROR_TYPE=0
-		if [ $IGNORE_WARNINGS -ne 1 ]; then
-			EXIT_STATUS=1
-		fi
+		EXIT_STATUS=1
 	fi
 	LOG_MSG "[INFO]:-Commencing multi-home checks, Completed" 1
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -764,9 +732,7 @@ CHK_OPEN_FILES () {
 	OPEN_VALUE=`$TRUSTED_SHELL $1 "ulimit -n"`
 	if [ $OPEN_VALUE -lt $OS_OPENFILES ];then
 		LOG_MSG "[WARN]:-Host $1 open files limit is $OPEN_VALUE should be >= $OS_OPENFILES" 1
-		if [ $IGNORE_WARNINGS -ne 1 ]; then
-			EXIT_STATUS=1
-		fi
+		EXIT_STATUS=1
 		ULIMIT_WARN=1
 	fi
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -837,9 +803,7 @@ CHK_QES () {
             LOG_MSG "[WARN]:-This will cause segment->master communication failures" 1
             LOG_MSG "[WARN]:-Remove $GP_HOSTADDRESS from local host line in /etc/hosts" 1
             LOG_MSG "[WARN]:-----------------------------------------------------------" 1
-			if [ $IGNORE_WARNINGS -ne 1 ]; then
-				EXIT_STATUS=1
-			fi
+            EXIT_STATUS=1
         fi
         # Check that we can write to the QE directory
         W_DIR=`$DIRNAME $GP_DIR`
@@ -1529,9 +1493,7 @@ STOP_QD_PRODUCTION () {
 	case $RETVAL in
 	    0 ) LOG_MSG "[INFO]:-Successfully shutdown the new Greenplum instance" ;;
 	    1 ) LOG_MSG "[WARN]:-Non fatal error from Greenplum instance shutdown, check log files, will continue"
-			if [ $IGNORE_WARNINGS -ne 1 ]; then
-				EXIT_STATUS=1
-			fi ;;
+		EXIT_STATUS=1 ;;
 	    * ) ERROR_EXIT "[FATAL]:-Failed to stop new Greenplum instance, check log file" 2
 	esac
     else
@@ -1545,9 +1507,7 @@ CREATE_STANDBY_QD () {
 	if [ ! -f $INIT_STANDBY_PROG ]; then
 		LOG_MSG "[WARN]:-Unable to locate $INIT_STANDBY_PROG, hence unable to initialize standby master $STANDBY_HOSTNAME"
 		STANDBY_RET_CODE=${STANDBY_FATAL_RET_CODE}
-		if [ $IGNORE_WARNINGS -ne 1 ]; then
-			EXIT_STATUS=1
-		fi
+		EXIT_STATUS=1
 	else
 		LOG_MSG "[INFO]:-Starting initialization of standby master $STANDBY_HOSTNAME" 1
 		INIT_STANDBY_ARGS=""
@@ -1681,9 +1641,7 @@ SCAN_LOG () {
 		LOG_MSG "[INFO]:-that was called today!" 1
 		fi
 		LOG_MSG "[WARN]:-*******************************************************" 1
-		if [ $IGNORE_WARNINGS -ne 1 ]; then
-			EXIT_STATUS=1
-		fi
+		EXIT_STATUS=1
 	else
 		LOG_MSG "[INFO]:-Log file scan check passed" 1
 	fi
@@ -1967,8 +1925,8 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:O:" opt
 						* ) LOG_MSG "[ERROR]:-Unknown option --$NAME" 1; USAGE ;;
 					esac
 
-					# Check if we are missing the long option value.  Currently all
-					# long options require a value so we can just do the check once.
+					# Check if we are missing the long option value.  All long options
+					# except ignore-warnings require a value, so do the check once.
 					if [ x"$NAME" == x"$VAL" ] && [ x"$NAME" != x"ignore-warnings" ]; then
 						LOG_MSG "[FATAL]:-Missing value for option --$NAME" 1;
 						USAGE;
@@ -2125,4 +2083,13 @@ if [ $STANDBY_RET_CODE -ne 0 ] && [ $STANDBY_RET_CODE -ne 1 ]; then
 fi
 
 LOG_MSG "[INFO]:-End Main"
+
+if [ $IGNORE_WARNINGS -eq 1 ]; then
+	if [ $EXIT_STATUS -eq 1 ]; then
+		EXIT_STATUS=0
+	elif [ $EXIT_STATUS -eq 2 ]; then
+		EXIT_STATUS=1
+	fi
+fi
+
 exit $EXIT_STATUS

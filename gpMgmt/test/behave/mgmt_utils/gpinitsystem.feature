@@ -17,20 +17,6 @@ Feature: gpinitsystem tests
         And gpconfig should print "Master  value: off" to stdout
         And gpconfig should print "Segment value: off" to stdout
 
-    Scenario: gpinitsystem exits with status 0 when the user enters nothing for the confirmation when --ignore-warnings is passed in
-        Given create demo cluster config
-         When the user runs command "echo '' | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile --ignore-warnings"
-         Then gpinitsystem should return a return code of 0
-        Given the user runs "gpstate"
-         Then gpstate should return a return code of 2
-
-    Scenario: gpinitsystem exits with status 0 when the user enters no for the confirmation when --ignore-warnings is passed in
-        Given create demo cluster config
-         When the user runs command "echo no | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile --ignore-warnings"
-         Then gpinitsystem should return a return code of 0
-        Given the user runs "gpstate"
-         Then gpstate should return a return code of 2
-
     Scenario: gpinitsystem creates a cluster when the user confirms the dialog when --ignore-warnings is passed in
         Given create demo cluster config
          When the user runs command "echo y | gpinitsystem -c ../gpAux/gpdemo/clusterConfigFile --ignore-warnings"
