@@ -1,6 +1,7 @@
-FROM pivotaldata/ubuntu-gpdb-dev:16.04
+FROM ubuntu:18.04
 
-RUN apt-get update && apt-get install -y openssh-server
+COPY src/tools/vagrant/multi-host-ubuntu/docker/ubuntu18-requirements.sh /gpdb_src/ubuntu18-requirements.sh
+RUN /gpdb_src/ubuntu18-requirements.sh
 
 RUN mkdir /var/run/sshd
 RUN echo 'root:nicepassword' | chpasswd
@@ -20,7 +21,7 @@ RUN usermod -aG sudo gpadmin
 WORKDIR /gpdb_src
 
 RUN bash -c "make distclean;\
-CFLAGS='-O0 -g' ./configure --disable-orca --disable-gpfdist --with-python --enable-debug --without-zstd"
+CFLAGS='-O0 -g' ./configure --disable-gpcloud --disable-orca --disable-gpfdist --with-python --enable-debug --without-zstd"
 RUN make install -j4 -s
 
 RUN chown -R gpadmin:gpadmin /usr/local/gpdb
@@ -30,5 +31,3 @@ RUN chown -R gpadmin:gpadmin /etc/ssh/
 RUN cat src/tools/vagrant/multi-host-ubuntu/docker/sysctl-conf >> /etc/sysctl.conf
 RUN cat src/tools/vagrant/multi-host-ubuntu/docker/limits-conf >> /etc/security/limits.conf
 RUN cat src/tools/vagrant/multi-host-ubuntu/docker/ld-so-conf >> /etc/ld.so.conf
-
-ENTRYPOINT [ "/gpdb_src/src/tools/vagrant/multi-host-ubuntu/docker/create-demo-cluster.sh" ]

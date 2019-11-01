@@ -3,6 +3,9 @@ set -x
 
 service ssh start
 
+locale-gen en_US.utf8
+update-locale
+
 su gpadmin -c '
     cd /gpdb_src
 

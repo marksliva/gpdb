@@ -19,7 +19,7 @@ RUN usermod -aG sudo gpadmin
 WORKDIR /gpdb_src
 
 RUN bash -c "make distclean;\
-CFLAGS='-O0 -g' ./configure --disable-orca --disable-gpfdist --with-python --enable-debug --without-zstd"
+CFLAGS='-O0 -g' ./configure --disable-orca --disable-gpfdist --with-python --enable-debug --without-zstd --with-libxml"
 RUN make install -j4 -s
 
 RUN mkdir -p /data/gpdata/master
@@ -36,9 +36,11 @@ RUN cat src/tools/vagrant/multi-host-ubuntu/docker/ld-so-conf >> /etc/ld.so.conf
 
 RUN pip install -r /gpdb_src/gpMgmt/requirements-dev.txt
 
+RUN mkdir -p /gpdb
+RUN cp /gpdb_src/src/tools/vagrant/multi-host-ubuntu/docker/start-multihost.sh /gpdb
 WORKDIR /gpdb
 
 # changes and building during development should happen in /gpdb which syncs from the host
 RUN rm -rf /gpdb_src
 
-ENTRYPOINT [ "/gpdb/src/tools/vagrant/multi-host-ubuntu/docker/start-multihost.sh" ]
+ENTRYPOINT [ "/gpdb/start-multihost.sh" ]
