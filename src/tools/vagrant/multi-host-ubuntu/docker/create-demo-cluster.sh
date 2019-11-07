@@ -19,4 +19,4 @@ su gpadmin -c '
     gpstop -ar
 '
 
-watch -n 5 'ps -ef wwf | grep postgres'
+#watch -n 5 'ps -ef wwf | grep postgres'

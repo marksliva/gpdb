@@ -31,3 +31,6 @@ RUN chown -R gpadmin:gpadmin /etc/ssh/
 RUN cat src/tools/vagrant/multi-host-ubuntu/docker/sysctl-conf >> /etc/sysctl.conf
 RUN cat src/tools/vagrant/multi-host-ubuntu/docker/limits-conf >> /etc/security/limits.conf
 RUN cat src/tools/vagrant/multi-host-ubuntu/docker/ld-so-conf >> /etc/ld.so.conf
+
+RUN src/tools/vagrant/multi-host-ubuntu/docker/create-demo-cluster.sh
+RUN src/tools/vagrant/multi-host-ubuntu/docker/install-gpupgrade.sh

@@ -16,6 +16,7 @@ apt-get install -y --no-install-recommends ant \
     flex \
     gdb \
     git-core \
+    go-dep \
     golang-go \
     iputils-ping \
     iproute2 \
@@ -39,6 +40,7 @@ apt-get install -y --no-install-recommends ant \
     ninja-build \
     openssh-server \
     pkg-config \
+    protobuf-compiler \
     python-dev \
     python-lockfile \
     python-pip \
