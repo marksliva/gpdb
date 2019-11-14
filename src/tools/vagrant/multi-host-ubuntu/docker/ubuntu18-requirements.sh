@@ -16,7 +16,6 @@ apt-get install -y --no-install-recommends ant \
     flex \
     gdb \
     git-core \
-    go-dep \
     golang-go \
     iputils-ping \
     iproute2 \

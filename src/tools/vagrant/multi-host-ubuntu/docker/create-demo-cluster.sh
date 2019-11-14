@@ -1,10 +1,11 @@
 #!/bin/bash
 set -x
 
-service ssh start
-
 locale-gen en_US.utf8
 update-locale
+
+echo "service ssh start" >> $HOME/.bash_profile
+service ssh start
 
 su gpadmin -c '
     cd /gpdb_src

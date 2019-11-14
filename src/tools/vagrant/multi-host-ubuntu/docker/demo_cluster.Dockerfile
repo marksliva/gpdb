@@ -21,11 +21,9 @@ RUN usermod -aG sudo gpadmin
 WORKDIR /gpdb_src
 
 RUN bash -c "make distclean;\
-CFLAGS='-O0 -g' ./configure --disable-gpcloud --disable-orca --disable-gpfdist --with-python --enable-debug --without-zstd"
-RUN make install -j4 -s
+    CFLAGS='-O0 -g' ./configure --disable-gpcloud --disable-orca --disable-gpfdist --with-python --enable-debug --without-zstd"
+RUN make install -j8 -s
 
-RUN chown -R gpadmin:gpadmin /usr/local/gpdb
-RUN chown -R gpadmin:gpadmin /gpdb_src
 RUN chown -R gpadmin:gpadmin /etc/ssh/
 
 RUN cat src/tools/vagrant/multi-host-ubuntu/docker/sysctl-conf >> /etc/sysctl.conf
@@ -34,3 +32,13 @@ RUN cat src/tools/vagrant/multi-host-ubuntu/docker/ld-so-conf >> /etc/ld.so.conf
 
 RUN src/tools/vagrant/multi-host-ubuntu/docker/create-demo-cluster.sh
 RUN src/tools/vagrant/multi-host-ubuntu/docker/install-gpupgrade.sh
+
+RUN git remote remove origin && git remote add origin https://github.com/greenplum-db/gpdb.git && git fetch origin
+RUN git checkout . && git clean -df && git checkout 6X_STABLE
+RUN bash -c "make distclean;\
+    CFLAGS='-O0 -g' ./configure --prefix /usr/local/gpdb6 --disable-gpcloud --disable-orca --disable-gpfdist --with-python --enable-debug --without-zstd"
+RUN make install -j8 -s
+
+RUN chown -R gpadmin:gpadmin /gpdb_src
+RUN chown -R gpadmin:gpadmin /usr/local/gpdb
+RUN chown -R gpadmin:gpadmin /usr/local/gpdb6
