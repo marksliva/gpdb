@@ -117,6 +117,7 @@ def impl(context, search_items, host, filename):
         if not found:
             raise Exception("entry for expected item %s not existing in pg_hba.conf '%s'" % (search_item, pghba_contents))
 
+
 # ensure pg_hba contains only cidr addresses, exclude mandatory entries for replication samenet if existing
 @given('pg_hba file "{filename}" on host "{host}" contains only cidr addresses')
 @then('pg_hba file "{filename}" on host "{host}" contains only cidr addresses')
@@ -148,10 +149,14 @@ def impl(context):
 
 
 @given('gpaddmirrors adds mirrors with options "{options}"')
+@when('gpaddmirrors adds mirrors with options "{options}"')
 @given('gpaddmirrors adds mirrors')
 @when('gpaddmirrors adds mirrors')
 @then('gpaddmirrors adds mirrors')
 def impl(context, options=" "):
+    # the default is to use ip addresses; add a "pseudo option" for callers to use Behave Scenario Outlines
+    if options == "use_ip_addresses":
+        options = " "
     add_mirrors(context, options)
 
 
@@ -200,6 +205,55 @@ def impl(context):
         if curr_content_to_host[key] != old_content_to_host[key]:
             raise Exception("Mirror host doesn't match for content %s (old host=%s) (new host=%s)"
             % (key, old_content_to_host[key], curr_content_to_host[key]))
+
+
+# TODO: this function might be simpler if we hard-code the two lines to add.
+@given('a gpmovemirrors cross_subnet input file is created')
+def impl(context):
+    contents = []
+    context.expected_segs = []
+
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segs = gparray.getSegmentsAsLoadedFromDb()
+    for seg in segs:
+        expected_seg = None
+        if seg.content == 2 and seg.role == 'm':
+            expected_seg = {'hostname': seg.hostname,
+                            'port': seg.port,
+                            'datadir': seg.datadir + "_moved"
+                            }
+        if seg.content == 3 and seg.role == 'm':
+            expected_seg = {'hostname': "sdw1-2",
+                            'port': seg.port + 1000,
+                            'datadir': seg.datadir
+                            }
+            if seg.hostname != "sdw1-1":
+                raise Exception("gpmovemirrors file does not move a mirror across subnets: %s to %s" % (seg.hostname, expected_seg['hostname']))
+        if expected_seg:
+            contents.append("{}|{}|{} {}|{}|{}".format(seg.hostname, seg.port, seg.datadir,
+                                                       expected_seg['hostname'], expected_seg['port'], expected_seg['datadir']))
+            context.expected_segs.append(expected_seg)
+
+    input_filename = "/tmp/gpmovemirrors_input_cross_subnet"
+    with open(input_filename, "w") as fd:
+        fd.write("\n".join(contents))
+
+
+@then('verify that mirror segments are in new cross_subnet configuration')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segs = gparray.getSegmentsAsLoadedFromDb()
+    actual_segs = filter(lambda seg: seg.role == 'm' and seg.content in [2, 3], segs)
+    actual_segs = map(lambda seg: {'hostname': seg.hostname,
+                                   'port': seg.port,
+                                   'datadir': seg.datadir
+                                   },
+                      actual_segs)
+
+    if len(context.expected_segs) != len(actual_segs):
+        raise Exception("expected number of segs to be %d, but got %d" % (len(context.expected_segs), len(actual_segs)))
+    if context.expected_segs != actual_segs:
+        raise Exception("expected segs to be %s, but got %s" % (context.expected_segs, actual_segs))
 
 
 @given('verify that mirror segments are in "{mirror_config}" configuration')

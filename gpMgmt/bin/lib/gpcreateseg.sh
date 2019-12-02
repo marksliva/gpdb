@@ -229,7 +229,19 @@ CREATE_QES_MIRROR () {
     # on mirror, just copy data from primary as the primary has all the relevant pg_hba.conf content
     # only the entry for replication is added on the primary if mirror hosts are there
     LOG_MSG "[INFO]:-Running pg_basebackup to init mirror on ${GP_HOSTADDRESS} using primary on ${PRIMARY_HOSTADDRESS} ..." 1
-    RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo 'host  replication ${GP_USER} samenet trust' >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload"
+    if [ $HBA_HOSTNAMES -eq 0 ]; then
+        MIRROR_IPV4_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
+        MIRROR_IPV6_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
+
+        local CIDR_ADDR
+        for ADDR in "${MIRROR_IPV4_LOCAL_ADDRESS_ALL[@]}" "${MIRROR_IPV6_LOCAL_ADDRESS_ALL[@]}"; do
+            CIDR_ADDR=$(GET_CIDRADDR $ADDR)
+            RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo 'host  replication ${GP_USER} ${CIDR_ADDR} trust' >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload"
+        done
+    else
+        RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo 'host  replication ${GP_USER} ${GP_HOSTADDRESS} trust' >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload"
+    fi
+
     RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup --xlog-method=stream --slot='internal_wal_replication_slot' -R -c fast -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D ${GP_DIR} -h ${PRIMARY_HOSTADDRESS} -p ${PRIMARY_PORT} --target-gp-dbid ${GP_DBID};"
     START_QE "-w"
     RETVAL=$?

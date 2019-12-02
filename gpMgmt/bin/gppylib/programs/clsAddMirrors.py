@@ -501,23 +501,28 @@ class GpAddMirrorsProgram:
 
     def config_primaries_for_replication(self, gpArray):
         logger.info("Starting to modify pg_hba.conf on primary segments to allow replication connections")
-        replicationStr = ". {0}/greenplum_path.sh; echo 'host  replication {1} samenet trust {2}' >> {3}/pg_hba.conf; pg_ctl -D {3} reload"
-
+        entries = []
         try:
             for segmentPair in gpArray.getSegmentList():
-                allow_pair_hba_line_entries = []
                 if self.__options.hba_hostnames:
                     mirror_hostname, _, _ = socket.gethostbyaddr(segmentPair.mirrorDB.getSegmentHostName())
-                    hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), mirror_hostname)
-                    allow_pair_hba_line_entries.append(hba_line_entry)
+                    hba_line_entry = "host all {0} {1} trust".format(unix.getUserName(), mirror_hostname)
+                    entries.append(hba_line_entry)
+                    entries.append('host  replication {0} {1} trust'.format(unix.getUserName(), mirror_hostname))
                 else:
                     mirror_ips = unix.InterfaceAddrs.remote('get mirror ips', segmentPair.mirrorDB.getSegmentHostName())
                     for ip in mirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix
-                        hba_line_entry = "\nhost all {0} {1} trust".format(unix.getUserName(), cidr)
-                        allow_pair_hba_line_entries.append(hba_line_entry)
-                cmdStr = replicationStr.format(os.environ["GPHOME"], unix.getUserName(), " ".join(allow_pair_hba_line_entries), segmentPair.primaryDB.datadir)
+                        hba_line_entry = "host all {0} {1} trust".format(unix.getUserName(), cidr)
+                        entries.append(hba_line_entry)
+                        entries.append('host  replication {0} {1} trust'.format(unix.getUserName(), cidr))
+
+                cmdStr = ". {0}/greenplum_path.sh; echo '{1}' >> {2}/pg_hba.conf; pg_ctl -D {2} reload".format(
+                    os.environ["GPHOME"],
+                    "\n".join(entries),
+                    segmentPair.primaryDB.datadir
+                )
                 logger.debug(cmdStr)
                 cmd = Command(name="append to pg_hba.conf", cmdStr=cmdStr, ctxt=base.REMOTE, remoteHost=segmentPair.primaryDB.hostname)
                 cmd.run(validateAfter=True)
