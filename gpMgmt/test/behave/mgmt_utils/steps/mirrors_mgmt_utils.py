@@ -117,6 +117,30 @@ def impl(context, search_items, host, filename):
         if not found:
             raise Exception("entry for expected item %s not existing in pg_hba.conf '%s'" % (search_item, pghba_contents))
 
+# ensure pg_hba contains replication entries
+# TODO: combine this with the code below
+@given('pg_hba file "{filename}" on host "{host}" contains "{quantity}" replication entries')
+@then('pg_hba file "{filename}" on host "{host}" contains "{quantity}" replication entries')
+def impl(context, quantity, host, filename):
+    cmd_str = "ssh %s cat %s" % (host, filename)
+    cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+    cmd.run(validateAfter=False)
+    pghba_contents= cmd.get_stdout().strip().split('\n')
+    num_replication = 0
+    for entry in pghba_contents:
+        contents = entry.strip()
+        # for example: host all all hostname    trust
+        if contents.startswith("host") and contents.endswith("trust"):
+            tokens = contents.split()
+            if len(tokens) != 5:
+                raise Exception("failed to parse pg_hba.conf line '%s'" % contents)
+            if tokens[1].strip() == "replication":
+                num_replication += 1
+    if num_replication == 0 and quantity == "some":
+        raise Exception("no replication entries in pg_hb file")
+    if num_replication > 0 and quantity == "no":
+        raise Exception("replication entries in pg_hb file")
+
 # ensure pg_hba contains only cidr addresses, exclude mandatory entries for replication samenet if existing
 @given('pg_hba file "{filename}" on host "{host}" contains only cidr addresses')
 @then('pg_hba file "{filename}" on host "{host}" contains only cidr addresses')
