@@ -382,8 +382,8 @@ def impl(context):
 def impl(context):
     input_filename = "/tmp/gpmovemirrors_input_cross_subnet"
     with open(input_filename, "w") as fd:
-        fd.write("sdw1-1|7001|/data/gpdata/mirror/gpseg3 sdw1-2|8001|/data/gpdata/mirror/gpseg3\n")
-        fd.write("sdw1-1|7000|/data/gpdata/mirror/gpseg2 sdw1-1|7000|/data/gpdata/mirror/gpseg2_moved\n")
+        fd.write("sdw1-1|%d|/data/gpdata/mirror/gpseg3 sdw1-2|%d|/data/gpdata/mirror/gpseg3\n" % (7001,8001))
+        fd.write("sdw1-1|%d|/data/gpdata/mirror/gpseg2 sdw1-1|%d|/data/gpdata/mirror/gpseg2_moved\n" % (7000,7000))
         fd.flush()
 
 @given('a sample gpmovemirrors input file is created in "{mirror_config}" configuration')
