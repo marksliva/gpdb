@@ -225,6 +225,23 @@ def impl(context):
             raise Exception("Mirror host doesn't match for content %s (old host=%s) (new host=%s)"
             % (key, old_content_to_host[key], curr_content_to_host[key]))
 
+# sdw1-1|7001|/data/gpdata/mirror/gpseg3 sdw1-2|8001|/data/gpdata/mirror/gpseg3
+# sdw1-1|7000|/data/gpdata/mirror/gpseg2 sdw1-1|7000|/data/gpdata/mirror/gpseg2_moved
+@then('verify that mirror segments are in new cross_subnet configuration')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segs = gparray.getSegmentsAsLoadedFromDb()
+    found_first = False
+    found_second = False
+    for seg in segs:
+        if seg.hostname == "sdw1-2" and seg.port==8001 and seg.datadir == "/data/gpdata/mirror/gpseg3":
+            found_first = True
+        if seg.hostname == "sdw1-1" and seg.port==7000 and seg.datadir == "/data/gpdata/mirror/gpseg2_moved":
+            found_second = True
+
+    if not found_first or not found_second:
+        config =  "\n".join(map(str, segs))
+        raise Exception("mirrors not moved into appropriate location:\n%s" % config)
 
 @given('verify that mirror segments are in "{mirror_config}" configuration')
 @then('verify that mirror segments are in "{mirror_config}" configuration')
@@ -360,6 +377,14 @@ def impl(context):
     Then all the segments are running
     And the segments are synchronized''')
 
+
+@given('a gpmovemirrors cross_subnet input file is created')
+def impl(context):
+    input_filename = "/tmp/gpmovemirrors_input_cross_subnet"
+    with open(input_filename, "w") as fd:
+        fd.write("sdw1-1|7001|/data/gpdata/mirror/gpseg3 sdw1-2|8001|/data/gpdata/mirror/gpseg3\n")
+        fd.write("sdw1-1|7000|/data/gpdata/mirror/gpseg2 sdw1-1|7000|/data/gpdata/mirror/gpseg2_moved\n")
+        fd.flush()
 
 @given('a sample gpmovemirrors input file is created in "{mirror_config}" configuration')
 def impl(context, mirror_config):
