@@ -39,7 +39,7 @@ def impl(context, segment):
           And the user runs command "gpactivatestandby -a" from standby master
          Then gpactivatestandby should return a return code of 0
          """)
-        os.environ['PGHOST'] = 'mdw-2'
+        os.environ['PGHOST'] = 'smdw-2'
 
     else: # mirrors
         context.execute_steps(u"""
@@ -64,10 +64,10 @@ def impl(context, segment):
         else:
             os.environ['PGHOST'] = orig_PGHOST
         context.execute_steps(u"""
-         When running gpinitstandby on host "mdw-2" to create a standby on host "mdw-1"
+         When running gpinitstandby on host "smdw-2" to create a standby on host "mdw-1"
          Then gpinitstandby should return a return code of 0
 
-         When the master goes down on "mdw-2"
+         When the master goes down on "smdw-2"
           And the user runs "gpactivatestandby -a"
          Then gpactivatestandby should return a return code of 0
         """)

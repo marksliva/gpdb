@@ -16,7 +16,7 @@ Feature: Tests for a cross_subnet cluster
          Then the primaries and mirrors excluding masterStandby are on different subnets
 
         Given the standby is not initialized
-         When running gpinitstandby on host "mdw-1" to create a standby on host "mdw-2"
+         When running gpinitstandby on host "mdw-1" to create a standby on host "smdw-2"
          Then gpinitstandby should return a return code of 0
           And verify the standby master entries in catalog
           And the primaries and mirrors including masterStandby are on different subnets

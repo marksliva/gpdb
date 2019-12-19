@@ -1835,6 +1835,7 @@ jobs:
             vars:
               instance_type: n1-standard-2
               subnet: toolshed
+              host_name: 'smdw'
               cluster_suffix: '-2'
               custom_ssh_key: "/tmp/build/put/ssh-extra-key/key"
         - task: gen_cluster_2
