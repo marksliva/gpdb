@@ -9,7 +9,7 @@
 from gppylib.mainUtils import *
 
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
-import os, sys, getopt, socket, StringIO, signal, copy
+import os, sys, getopt, socket, StringIO, signal, copy, pipes
 
 from gppylib import gparray, gplog, pgconf, userinput, utils, heapchecksum
 from gppylib.commands.base import Command
@@ -509,8 +509,12 @@ class GpAddMirrorsProgram:
                     hba_line_entry = "host all {0} {1} trust".format(unix.getUserName(), mirror_hostname)
                     entries.append(hba_line_entry)
                     entries.append('host  replication {0} {1} trust'.format(unix.getUserName(), mirror_hostname))
+                    if mirror_hostname != "localhost":
+                        entries.append('host  replication {0} localhost trust'.format(unix.getUserName()))
                 else:
                     mirror_ips = unix.InterfaceAddrs.remote('get mirror ips', segmentPair.mirrorDB.getSegmentHostName())
+                    if '127.0.0.1' not in mirror_ips:
+                        entries.append('host replication {0} 127.0.0.1/32 trust'.format(unix.getUserName()))
                     for ip in mirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix
@@ -518,9 +522,9 @@ class GpAddMirrorsProgram:
                         entries.append(hba_line_entry)
                         entries.append('host  replication {0} {1} trust'.format(unix.getUserName(), cidr))
 
-                cmdStr = ". {0}/greenplum_path.sh; echo '{1}' >> {2}/pg_hba.conf; pg_ctl -D {2} reload".format(
+                cmdStr = ". {0}/greenplum_path.sh; echo {1} >> {2}/pg_hba.conf; pg_ctl -D {2} reload".format(
                     os.environ["GPHOME"],
-                    "\n".join(entries),
+                    pipes.quote("\n".join(entries)),
                     segmentPair.primaryDB.datadir
                 )
                 logger.debug(cmdStr)

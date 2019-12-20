@@ -2992,7 +2992,6 @@ def impl(context, command, input):
     context.stdout_message = stdout
     context.error_message = stderr
 
-# NOTE: when we update to Python 3, its ipaddress module would make this easier
 def are_on_different_subnets(primary_hostname, mirror_hostname):
     primary_broadcast = check_output(['ssh', '-n', primary_hostname, "/sbin/ip addr show eth0 | grep 'inet .* brd' | awk '{ print $4 }'"])
     mirror_broadcast = check_output(['ssh', '-n', mirror_hostname,  "/sbin/ip addr show eth0 | grep 'inet .* brd' | awk '{ print $4 }'"])

@@ -184,8 +184,3 @@ Feature: gpinitsystem tests
         Then verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_hba.conf" contains FQDN only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_hba.conf" contains FQDN only for trusted host
         And verify that the file "../gpAux/gpdemo/datadirs/qddir/demoDataDir-1/newstandby/pg_hba.conf" contains FQDN only for trusted host
-
-#    The concourse tasks to bring up and verify the cross-subnet environment implciitly tests gpinitsystem.
-#    Therefore, no need to repeat the same test here.
-#    @cross_subnet
-#    Scenario: gpinitsystem succeeds across subnets

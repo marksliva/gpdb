@@ -16,14 +16,13 @@ Feature: Tests for a cross_subnet cluster
          Then the primaries and mirrors excluding masterStandby are on different subnets
 
         Given the standby is not initialized
-         When running gpinitstandby on host "mdw-1" to create a standby on host "smdw-2"
+         When running gpinitstandby on host "mdw-1" to create a standby on host "mdw-2"
          Then gpinitstandby should return a return code of 0
           And verify the standby master entries in catalog
           And the primaries and mirrors including masterStandby are on different subnets
           And the standby replicates and fails over and back correctly
 
     # Validate that gpmovemirrors can move mirrors across subnets
-      # TODO: check pg_hba.conf file for exact entries
     Scenario: gpmovemirrors can move mirrors between subnets
         Given the database is not running
           And a working directory of the test as '/tmp/gpmovemirrors'
@@ -57,5 +56,5 @@ Feature: Tests for a cross_subnet cluster
       Examples:
         | hba_hostnames | options             |
         |  0            |  use_ip_addresses   |
-        |  1            |  '--hba-hostnames'  |
+        |  1            |  --hba-hostnames    |
 

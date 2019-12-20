@@ -215,6 +215,7 @@ def impl(context):
 
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     segs = gparray.getSegmentsAsLoadedFromDb()
+
     for seg in segs:
         expected_seg = None
         if seg.content == 2 and seg.role == 'm':
