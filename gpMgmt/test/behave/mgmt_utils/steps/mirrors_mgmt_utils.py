@@ -208,34 +208,15 @@ def impl(context):
 # TODO: this function might be simpler if we hard-code the two lines to add.
 @given('a gpmovemirrors cross_subnet input file is created')
 def impl(context):
-    contents = []
     context.expected_segs = []
 
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    segs = gparray.getSegmentsAsLoadedFromDb()
-
-    for seg in segs:
-        expected_seg = None
-        if seg.content == 2 and seg.role == 'm':
-            expected_seg = {'hostname': seg.hostname,
-                            'port': seg.port,
-                            'datadir': seg.datadir + "_moved"
-                            }
-        if seg.content == 3 and seg.role == 'm':
-            expected_seg = {'hostname': "sdw1-2",
-                            'port': seg.port + 1000,
-                            'datadir': seg.datadir
-                            }
-            if seg.hostname != "sdw1-1":
-                raise Exception("gpmovemirrors file does not move a mirror across subnets: %s to %s" % (seg.hostname, expected_seg['hostname']))
-        if expected_seg:
-            contents.append("{}|{}|{} {}|{}|{}".format(seg.hostname, seg.port, seg.datadir,
-                                                       expected_seg['hostname'], expected_seg['port'], expected_seg['datadir']))
-            context.expected_segs.append(expected_seg)
+    context.expected_segs.append("sdw1-1|21500|/tmp/gpmovemirrors/data/mirror/gpseg2_moved")
+    context.expected_segs.append("sdw1-2|22501|/tmp/gpmovemirrors/data/mirror/gpseg3")
 
     input_filename = "/tmp/gpmovemirrors_input_cross_subnet"
     with open(input_filename, "w") as fd:
-        fd.write("\n".join(contents))
+        fd.write("sdw1-1|21500|/tmp/gpmovemirrors/data/mirror/gpseg2 %s\n" % context.expected_segs[0])
+        fd.write("sdw1-1|21501|/tmp/gpmovemirrors/data/mirror/gpseg3 %s" % context.expected_segs[1])
 
 
 @then('verify that mirror segments are in new cross_subnet configuration')
@@ -243,11 +224,7 @@ def impl(context):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     segs = gparray.getSegmentsAsLoadedFromDb()
     actual_segs = filter(lambda seg: seg.role == 'm' and seg.content in [2, 3], segs)
-    actual_segs = map(lambda seg: {'hostname': seg.hostname,
-                                   'port': seg.port,
-                                   'datadir': seg.datadir
-                                   },
-                      actual_segs)
+    actual_segs = map(lambda seg: "%s|%s|%s" % (seg.hostname, seg.port, seg.datadir), actual_segs)
 
     if len(context.expected_segs) != len(actual_segs):
         raise Exception("expected number of segs to be %d, but got %d" % (len(context.expected_segs), len(actual_segs)))
