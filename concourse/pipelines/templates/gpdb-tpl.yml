@@ -55,36 +55,32 @@ anchors:
   instance_type: n1-standard-1
   PLATFORM: centos6
 
-- &ccp_destroy
-  put: terraform
-  params:
-    action: destroy
-    env_name_file: terraform/name
-    terraform_source: ccp_src/google/
-    vars:
-      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
-      aws_ebs_volume_type: standard
-  get_params:
-    action: destroy
-
-- &two_cluster_destroy_common
+- &destroy_common
   action: destroy
   terraform_source: ccp_src/google/
   vars:
     aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
     aws_ebs_volume_type: standard
 
+- &ccp_destroy
+  put: terraform
+  params:
+    <<: *destroy_common
+    env_name_file: terraform/name
+  get_params:
+    action: destroy
+
 - &ccp_destroy_two_clusters
   in_parallel:
     - put: terraform_1
       params:
-        <<: *two_cluster_destroy_common
+        <<: *destroy_common
         env_name_file: terraform_1/name
       get_params:
         action: destroy
     - put: terraform_2
       params:
-        <<: *two_cluster_destroy_common
+        <<: *destroy_common
         env_name_file: terraform_2/name
       get_params:
         action: destroy
