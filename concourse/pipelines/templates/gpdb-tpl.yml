@@ -36,6 +36,147 @@
                     ] %}
 
 ## ======================================================================
+##                   _
+##   __ _ _ __   ___| |__   ___  _ __ ___
+##  / _` | '_ \ / __| '_ \ / _ \| '__/ __|
+## | (_| | | | | (__| | | | (_) | |  \__ \
+##  \__,_|_| |_|\___|_| |_|\___/|_|  |___/
+## ======================================================================
+## NOTE: only one anchors section is allowed per file, so we define this
+##  at the top of the file so anchors are usable as early as possible.
+anchors:
+- &ccp_default_params
+  action: create
+  delete_on_failure: true
+  generate_random_name: true
+  terraform_source: ccp_src/google/
+
+- &ccp_default_vars
+  instance_type: n1-standard-1
+  PLATFORM: centos6
+
+- &ccp_destroy
+  put: terraform
+  params:
+    action: destroy
+    env_name_file: terraform/name
+    terraform_source: ccp_src/google/
+    vars:
+      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
+      aws_ebs_volume_type: standard
+  get_params:
+    action: destroy
+
+- &two_cluster_destroy_common
+  action: destroy
+  terraform_source: ccp_src/google/
+  vars:
+    aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
+    aws_ebs_volume_type: standard
+
+- &ccp_destroy_two_clusters
+  in_parallel:
+    - put: terraform_1
+      params:
+        <<: *two_cluster_destroy_common
+        env_name_file: terraform_1/name
+      get_params:
+        action: destroy
+    - put: terraform_2
+      params:
+        <<: *two_cluster_destroy_common
+        env_name_file: terraform_2/name
+      get_params:
+        action: destroy
+
+- &ccp_gen_cluster_default_params
+  AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+  AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+  AWS_DEFAULT_REGION: {{aws-region}}
+  BUCKET_PATH: clusters-google/
+  BUCKET_NAME: {{tf-bucket-name}}
+  CLOUD_PROVIDER: google
+
+- &set_failed
+  do:
+    - task: on_failure_set_failed
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: pivotaldata/ccp
+            tag: "7"
+        inputs:
+          - name: ccp_src
+          - name: terraform
+        run:
+          path: 'ccp_src/google/ccp_failed_test.sh'
+        params:
+          GOOGLE_CREDENTIALS: {{google-service-account-key}}
+          GOOGLE_PROJECT_ID: {{google-project-id}}
+          GOOGLE_ZONE: {{google-zone}}
+          GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
+          AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+          AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+          AWS_DEFAULT_REGION: {{tf-machine-region}}
+          BUCKET_PATH: clusters-google/
+          BUCKET_NAME: {{tf-bucket-name}}
+
+- &set_failed_two_clusters_common
+  platform: linux
+  image_resource:
+    type: docker-image
+    source:
+      repository: pivotaldata/ccp
+      tag: "7"
+  run:
+    path: 'ccp_src/google/ccp_failed_test.sh'
+  params:
+    GOOGLE_CREDENTIALS: {{google-service-account-key}}
+    GOOGLE_PROJECT_ID: {{google-project-id}}
+    GOOGLE_ZONE: {{google-zone}}
+    GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
+    AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+    AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+    AWS_DEFAULT_REGION: {{tf-machine-region}}
+    BUCKET_PATH: clusters-google/
+    BUCKET_NAME: {{tf-bucket-name}}
+
+- &terraform_cluster
+  type: terraform
+  source:
+    env:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+    vars:
+      project_id: {{google-project-id}}
+    storage:
+      access_key_id: {{tf-machine-access-key-id}}
+      secret_access_key: {{tf-machine-secret-access-key}}
+      region_name: {{aws-region}}
+      # This is not parameterized, on purpose. All tfstates will go to this spot,
+      # and different teams will place there clusters' tfstate files under different paths
+      bucket: gpdb5-pipeline-dynamic-terraform
+      bucket_path: clusters-google/
+
+- &set_failed_two_clusters
+  in_parallel:
+    - task: on_failure_set_failed-1
+      config:
+        <<: *set_failed_two_clusters_common
+        inputs:
+          - name: ccp_src
+          - name: terraform_1
+    - task: on_failure_set_failed-2
+      config:
+        <<: *set_failed_two_clusters_common
+        inputs:
+          - name: ccp_src
+          - name: terraform_2
+
+## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|
 ## | (_| | | | (_) | |_| | |_) \__ \
@@ -318,59 +459,13 @@ resources:
 {% if "centos6" in os_types or
       "ICW"     in test_sections %}
 - name: terraform
-  type: terraform
-  source:
-    env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
-    vars:
-      project_id: {{google-project-id}}
-    storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
-      # This is not parameterized, on purpose. All tfstates will go to this spot,
-      # and different teams will place there clusters' tfstate files under different paths
-      bucket: gpdb5-pipeline-dynamic-terraform
-      bucket_path: clusters-google/
+  <<: *terraform_cluster
 
-# todo: make this an anchor and use that once anchors are defined before this point
 - name: terraform_1
-  type: terraform
-  source:
-    env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
-    vars:
-      project_id: {{google-project-id}}
-    storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
-      # This is not parameterized, on purpose. All tfstates will go to this spot,
-      # and different teams will place there clusters' tfstate files under different paths
-      bucket: gpdb5-pipeline-dynamic-terraform
-      bucket_path: clusters-google/
+  <<: *terraform_cluster
 
 - name: terraform_2
-  type: terraform
-  source:
-    env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
-    vars:
-      project_id: {{google-project-id}}
-    storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
-      # This is not parameterized, on purpose. All tfstates will go to this spot,
-      # and different teams will place there clusters' tfstate files under different paths
-      bucket: gpdb5-pipeline-dynamic-terraform
-      bucket_path: clusters-google/
+  <<: *terraform_cluster
 
 - name: alpine-docker
   type: docker-image
@@ -771,127 +866,7 @@ resources:
     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
     start: {{reduced-frequency-trigger-start}}
     stop: {{reduced-frequency-trigger-stop}}
-## ======================================================================
-##                   _
-##   __ _ _ __   ___| |__   ___  _ __ ___
-##  / _` | '_ \ / __| '_ \ / _ \| '__/ __|
-## | (_| | | | | (__| | | | (_) | |  \__ \
-##  \__,_|_| |_|\___|_| |_|\___/|_|  |___/
-## ======================================================================
 
-anchors:
-- &ccp_default_params
-  action: create
-  delete_on_failure: true
-  generate_random_name: true
-  terraform_source: ccp_src/google/
-
-- &ccp_default_vars
-  instance_type: n1-standard-1
-  PLATFORM: centos6
-
-- &ccp_destroy
-  put: terraform
-  params:
-    action: destroy
-    env_name_file: terraform/name
-    terraform_source: ccp_src/google/
-    vars:
-      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
-      aws_ebs_volume_type: standard
-  get_params:
-    action: destroy
-
-- &two_cluster_destroy_common
-  action: destroy
-  terraform_source: ccp_src/google/
-  vars:
-    aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
-    aws_ebs_volume_type: standard
-
-- &ccp_destroy_two_clusters
-  in_parallel:
-  - put: terraform_1
-    params:
-      <<: *two_cluster_destroy_common
-      env_name_file: terraform_1/name
-    get_params:
-      action: destroy
-  - put: terraform_2
-    params:
-      <<: *two_cluster_destroy_common
-      env_name_file: terraform_2/name
-    get_params:
-      action: destroy
-
-- &ccp_gen_cluster_default_params
-  AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-  AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-  AWS_DEFAULT_REGION: {{aws-region}}
-  BUCKET_PATH: clusters-google/
-  BUCKET_NAME: {{tf-bucket-name}}
-  CLOUD_PROVIDER: google
-
-- &set_failed
-  do:
-  - task: on_failure_set_failed
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: pivotaldata/ccp
-          tag: "7"
-      inputs:
-        - name: ccp_src
-        - name: terraform
-      run:
-        path: 'ccp_src/google/ccp_failed_test.sh'
-      params:
-        GOOGLE_CREDENTIALS: {{google-service-account-key}}
-        GOOGLE_PROJECT_ID: {{google-project-id}}
-        GOOGLE_ZONE: {{google-zone}}
-        GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
-        AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-        AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-        AWS_DEFAULT_REGION: {{tf-machine-region}}
-        BUCKET_PATH: clusters-google/
-        BUCKET_NAME: {{tf-bucket-name}}
-
-- &set_failed_two_clusters_common
-  platform: linux
-  image_resource:
-    type: docker-image
-    source:
-      repository: pivotaldata/ccp
-      tag: "7"
-  run:
-    path: 'ccp_src/google/ccp_failed_test.sh'
-  params:
-    GOOGLE_CREDENTIALS: {{google-service-account-key}}
-    GOOGLE_PROJECT_ID: {{google-project-id}}
-    GOOGLE_ZONE: {{google-zone}}
-    GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
-    AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-    AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-    AWS_DEFAULT_REGION: {{tf-machine-region}}
-    BUCKET_PATH: clusters-google/
-    BUCKET_NAME: {{tf-bucket-name}}
-
-- &set_failed_two_clusters
-  in_parallel:
-    - task: on_failure_set_failed-1
-      config:
-        <<: *set_failed_two_clusters_common
-        inputs:
-          - name: ccp_src
-          - name: terraform_1
-    - task: on_failure_set_failed-2
-      config:
-        <<: *set_failed_two_clusters_common
-        inputs:
-          - name: ccp_src
-          - name: terraform_2
 
 ## ======================================================================
 ##    _       _
