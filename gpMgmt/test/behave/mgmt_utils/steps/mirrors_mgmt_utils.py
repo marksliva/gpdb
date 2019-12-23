@@ -152,11 +152,9 @@ def impl(context):
 @when('gpaddmirrors adds mirrors with options "{options}"')
 @given('gpaddmirrors adds mirrors')
 @when('gpaddmirrors adds mirrors')
+@when('gpaddmirrors adds mirrors with options ""')
 @then('gpaddmirrors adds mirrors')
 def impl(context, options=" "):
-    # the default is to use ip addresses; add a "pseudo option" for callers to use Behave Scenario Outlines
-    if options == "use_ip_addresses":
-        options = " "
     add_mirrors(context, options)
 
 

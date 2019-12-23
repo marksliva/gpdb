@@ -54,7 +54,7 @@ Feature: Tests for a cross_subnet cluster
           And the mirrors replicate and fail over and back correctly
 
       Examples:
-        | hba_hostnames | options             |
-        |  0            |  use_ip_addresses   |
-        |  1            |  --hba-hostnames    |
+        | hba_hostnames | options          |
+        |  0            |                  |
+        |  1            |  --hba-hostnames |
 
