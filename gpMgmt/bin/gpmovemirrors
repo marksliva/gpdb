@@ -372,25 +372,23 @@ try:
     if numberOfWorkers > 0:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         try:
-            for update_segment in update_segments:
+            username = unix.getUserName()
+            for primary_datadir, primary_hostname, newMirror_hostname in update_segments:
                 entries = []
-                primary_datadir = update_segment[0]
-                primary_hostname = update_segment[1]
-                newMirror_hostname = update_segment[2]
                 if options.hba_hostnames:
                     hostname, _, _ = socket.gethostbyaddr(newMirror_hostname)
-                    entry = "host all {0} {1} trust".format(unix.getUserName(), hostname)
+                    entry = "host all {username} {hostname} trust".format(username=username, hostname=hostname)
                     entries.append(entry)
-                    entry = 'host  replication {0} {1} trust'.format(unix.getUserName(), hostname)
+                    entry = 'host  replication {username} {hostname} trust'.format(username=username, hostname=hostname)
                     entries.append(entry)
                 else:
                     newMirror_ips = unix.InterfaceAddrs.remote('get mirror ips', newMirror_hostname)
                     for ip in newMirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix
-                        entry = "host all {0} {1} trust".format(unix.getUserName(), cidr)
+                        entry = "host all {username} {cidr} trust".format(username=username, cidr=cidr)
                         entries.append(entry)
-                        entry = 'host  replication {0} {1} trust'.format(unix.getUserName(), cidr)
+                        entry = 'host  replication {username} {cidr} trust'.format(username=username, cidr=cidr)
                         entries.append(entry)
 
                 cmdStr = ". {0}/greenplum_path.sh; echo {1} >> {2}/pg_hba.conf; pg_ctl -D {2} reload".format(

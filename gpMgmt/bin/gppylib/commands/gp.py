@@ -818,18 +818,19 @@ class ModifyConfSetting(Command):
 class ModifyPgHbaConfSetting(Command):
     def __init__(self, name, file, ctxt, remoteHost, addresses, is_hba_hostnames):
         hba_content = ""
+        username = getUserName()
 
         for address in addresses:
             if is_hba_hostnames:
-                hba_content += "\nhost all {0} {1} trust".format(getUserName(), address)
-                hba_content += "\nhost replication {0} {1} trust".format(getUserName(), address)
+                hba_content += "\nhost all {username} {address} trust".format(username=username, address=address)
+                hba_content += "\nhost replication {username} {address} trust".format(username=username, address=address)
             else:
                 ips = InterfaceAddrs.remote('get mirror ips', address)
                 for ip in ips:
                     cidr_suffix = '/128' if ':' in ip else '/32'
                     cidr = ip + cidr_suffix
-                    hba_content += "\nhost all {0} {1} trust".format(getUserName(), cidr)
-                    hba_content += "\nhost replication {0} {1} trust".format(getUserName(), cidr)
+                    hba_content += "\nhost all {username} {cidr} trust".format(username=username, cidr=cidr)
+                    hba_content += "\nhost replication {username} {cidr} trust".format(username=username, cidr=cidr)
 
         # You might think you can substitute the primary and mirror addresses
         # with the new primary and mirror addresses, but what if they were the
