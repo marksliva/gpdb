@@ -230,8 +230,8 @@ CREATE_QES_MIRROR () {
     # only the entry for replication is added on the primary if mirror hosts are there
     LOG_MSG "[INFO]:-Running pg_basebackup to init mirror on ${GP_HOSTADDRESS} using primary on ${PRIMARY_HOSTADDRESS} ..." 1
     if [ $HBA_HOSTNAMES -eq 0 ]; then
-        local MIRROR_IPV4_LOCAL_ADDRESS_ALL=$($TRUSTED_SHELL $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $AWK '{print \\$2}' | $CUT -d/ -f1")
-        local MIRROR_IPV6_LOCAL_ADDRESS_ALL=$($TRUSTED_SHELL $GP_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' | $CUT -d/ -f1")
+        local MIRROR_IPV4_LOCAL_ADDRESS_ALL=`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $AWK '{print \\$2}' | $CUT -d/ -f1"`
+        local MIRROR_IPV6_LOCAL_ADDRESS_ALL=`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' | $CUT -d/ -f1"`
 
         local CIDR_ADDR
         local PG_HBA_ENTRIES=""
