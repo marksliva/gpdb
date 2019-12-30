@@ -7,6 +7,7 @@ Feature: Tests for a cross_subnet cluster
          Then the primaries and mirrors including masterStandby are on different subnets
           And all the segments are running
           And the segments are synchronized
+          And the mirrors replicate and fail over and back correctly
 
     # Validate that the created standby is on a different subnet from the master
     Scenario: gpinitstandby works across subnets
