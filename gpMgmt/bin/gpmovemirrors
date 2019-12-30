@@ -374,23 +374,21 @@ try:
         try:
             username = unix.getUserName()
             for primary_datadir, primary_hostname, newMirror_hostname in update_segments:
-                entries = []
+                hosts = []
                 if options.hba_hostnames:
                     hostname, _, _ = socket.gethostbyaddr(newMirror_hostname)
-                    entry = "host all {username} {hostname} trust".format(username=username, hostname=hostname)
-                    entries.append(entry)
-                    entry = 'host  replication {username} {hostname} trust'.format(username=username, hostname=hostname)
-                    entries.append(entry)
+                    hosts.append(hostname)
                 else:
                     newMirror_ips = unix.InterfaceAddrs.remote('get mirror ips', newMirror_hostname)
                     for ip in newMirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix
-                        entry = "host all {username} {cidr} trust".format(username=username, cidr=cidr)
-                        entries.append(entry)
-                        entry = 'host  replication {username} {cidr} trust'.format(username=username, cidr=cidr)
-                        entries.append(entry)
+                        hosts.append(cidr)
 
+                entries = []
+                for host in hosts:
+                    entries.append("host all {username} {host} trust".format(username=username, host=host))
+                    entries.append('host  replication {username} {host} trust'.format(username=username, host=host))
                 cmdStr = ". {0}/greenplum_path.sh; echo {1} >> {2}/pg_hba.conf; pg_ctl -D {2} reload".format(
                     os.environ["GPHOME"],
                     pipes.quote("\n".join(entries)),

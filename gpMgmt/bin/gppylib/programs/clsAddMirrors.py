@@ -501,19 +501,16 @@ class GpAddMirrorsProgram:
 
     def config_primaries_for_replication(self, gpArray):
         logger.info("Starting to modify pg_hba.conf on primary segments to allow replication connections")
-        entries = []
         try:
             username = unix.getUserName()
             for segmentPair in gpArray.getSegmentList():
+                hosts = []
+                entries = []
                 if self.__options.hba_hostnames:
                     mirror_hostname, _, _ = socket.gethostbyaddr(segmentPair.mirrorDB.getSegmentHostName())
-                    entries.append("host all {username} {mirror_hostname} trust"
-                                   .format(username=username, mirror_hostname=mirror_hostname))
-                    entries.append('host  replication {username} {mirror_hostname} trust'
-                                   .format(username=username, mirror_hostname=mirror_hostname))
+                    hosts.append(mirror_hostname)
                     if mirror_hostname != "localhost":
-                        entries.append('host  replication {username} localhost trust'
-                                       .format(username=username))
+                        entries.append('host  replication {username} localhost trust'.format(username=username))
                 else:
                     mirror_ips = unix.InterfaceAddrs.remote('get mirror ips', segmentPair.mirrorDB.getSegmentHostName())
                     if '127.0.0.1' not in mirror_ips:
@@ -522,10 +519,11 @@ class GpAddMirrorsProgram:
                     for ip in mirror_ips:
                         cidr_suffix = '/128' if ':' in ip else '/32'
                         cidr = ip + cidr_suffix
-                        entries.append("host all {username} {cidr} trust".format(username=username, cidr=cidr))
-                        entries.append('host  replication {username} {cidr} trust'
-                                       .format(username=username, cidr=cidr))
+                        hosts.append(cidr)
 
+                for host in hosts:
+                    entries.append("host all {username} {host} trust".format(username=username, host=host))
+                    entries.append('host  replication {username} {host} trust'.format(username=username, host=host))
                 cmdStr = ". {gphome}/greenplum_path.sh; echo {entries} >> {primarydb_datadir}/pg_hba.conf; pg_ctl -D {primarydb_datadir} reload" \
                     .format(
                     gphome=os.environ["GPHOME"],

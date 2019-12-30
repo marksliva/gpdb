@@ -817,21 +817,22 @@ class ModifyConfSetting(Command):
 
 class ModifyPgHbaConfSetting(Command):
     def __init__(self, name, file, ctxt, remoteHost, addresses, is_hba_hostnames):
-        hba_content = ""
         username = getUserName()
-
+        hosts = []
         for address in addresses:
             if is_hba_hostnames:
-                hba_content += "\nhost all {username} {address} trust".format(username=username, address=address)
-                hba_content += "\nhost replication {username} {address} trust".format(username=username, address=address)
+                hosts.append(address)
             else:
                 ips = InterfaceAddrs.remote('get mirror ips', address)
                 for ip in ips:
                     cidr_suffix = '/128' if ':' in ip else '/32'
                     cidr = ip + cidr_suffix
-                    hba_content += "\nhost all {username} {cidr} trust".format(username=username, cidr=cidr)
-                    hba_content += "\nhost replication {username} {cidr} trust".format(username=username, cidr=cidr)
+                    hosts.append(cidr)
 
+        hba_content = ""
+        for host in hosts:
+            hba_content += "\nhost all {username} {host} trust".format(username=username, host=host)
+            hba_content += "\nhost replication {username} {host} trust".format(username=username, host=host)
         # You might think you can substitute the primary and mirror addresses
         # with the new primary and mirror addresses, but what if they were the
         # same? Then you could end up with only the new primary or new mirror
