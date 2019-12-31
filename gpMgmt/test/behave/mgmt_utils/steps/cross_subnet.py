@@ -1,12 +1,16 @@
 import os
+import subprocess
 
 from behave import given, when, then
 
+from gppylib.db import dbconn
+from gppylib.gparray import GpArray
 
 # To test that an added mirror/standby works properly, we ensure that we
 #   can actually recover data on that segment when it fails over.  We also
 #   then bring up the original segment pair to ensure that the new primary/master
 #   is fully functional.
+#
 # We follow these steps:
 # 1). add table/data to current master/primary
 # 2). stop master/primary
@@ -15,16 +19,22 @@ from behave import given, when, then
 # -). prepare for 6: recoverseg to bring up old master/primary as standby/mirror
 # 6). repeat 1-4 for new-old back to old-new
 # NOTE: this method leaves the cluster without a standby-master
+#
+# XXX In addition to the above steps, we manually check to ensure that a
+# utility-mode replication connection can also succeed from the mirror host to
+# the primary host before and after both failover and recovery.
 @then('the {segment} replicates and fails over and back correctly')
 @then('the {segment} replicate and fail over and back correctly')
 def impl(context, segment):
     if segment not in ('standby', 'mirrors'):
-        raise Exception("")
+        raise Exception("invalid segment type")
 
     context.execute_steps(u"""
     Given the segments are synchronized
-      And a tablespace is created with data
-    """)
+     Then replication connections can be made from the acting {segment}
+
+    Given a tablespace is created with data
+    """.format(segment=segment))
 
     # For the 'standby' case, we set PGHOST back to its original value instead
     # of 'mdw-1'.  When the function impl() is called, PGHOST is initially unset
@@ -51,9 +61,10 @@ def impl(context, segment):
     context.execute_steps(u"""
      Then the segments are synchronized
       And the tablespace is valid
+      And replication connections can be made from the acting {segment}
 
     Given another tablespace is created with data
-    """)
+    """.format(segment=segment))
 
     # Fail over (rebalance) to original master/primaries.
     if segment == 'standby':
@@ -81,4 +92,32 @@ def impl(context, segment):
      Then the segments are synchronized
       And the tablespace is valid
       And the other tablespace is valid
-    """)
+      And replication connections can be made from the acting {segment}
+    """.format(segment=segment))
+
+@then('replication connections can be made from the acting {segment}')
+def impl(context, segment):
+    if segment not in ('standby', 'mirrors'):
+        raise Exception("invalid segment type")
+
+    def check_replication(primary, mirror):
+        # Perform a manual replication connection from the mirror host to the
+        # primary host. See
+        #     https://www.postgresql.org/docs/9.4/protocol-replication.html
+        subprocess.check_call([
+            'ssh', '-n', mirror.hostname,
+            'PGOPTIONS="-c gp_session_role=utility"',
+            '{gphome}/bin/psql -h {host} -p {port} "dbname=postgres replication=database" -c "IDENTIFY_SYSTEM;"'.format(
+                gphome=os.environ['GPHOME'],
+                host=primary.address, # use the "internal" routing address
+                port=primary.port,
+            )
+        ])
+
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+
+    if segment == 'standby':
+        check_replication(gparray.master, gparray.standbyMaster)
+    else: # mirrors
+        for pair in gparray.segmentPairs:
+            check_replication(pair.primaryDB, pair.mirrorDB)
