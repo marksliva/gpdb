@@ -16,9 +16,10 @@ from gppylib.gparray import GpArray
 # 2). stop master/primary
 # 3). wait for automatic failover(for downed primary) or explicitly promote standby(for downed master)
 # 4). make sure data is on new master/primary
-# -). prepare for 6: recoverseg to bring up old master/primary as standby/mirror
+# -). prepare for 6:
+#     - for segments: recoverseg to bring up old primary as mirror
+#     - for the master: bring up a new standby
 # 6). repeat 1-4 for new-old back to old-new
-# NOTE: this method leaves the cluster without a standby-master
 #
 # XXX In addition to the above steps, we manually check to ensure that a
 # utility-mode replication connection can also succeed from the mirror host to
@@ -29,6 +30,7 @@ def impl(context, segment):
     if segment not in ('standby', 'mirrors'):
         raise Exception("invalid segment type")
 
+    context.standby_hostname = 'mdw-2'
     context.execute_steps(u"""
     Given the segments are synchronized
      Then replication connections can be made from the acting {segment}
@@ -43,6 +45,10 @@ def impl(context, segment):
 
     # Fail over to standby/mirrors.
     if segment == 'standby':
+        master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
+        context.standby_port = os.environ.get('PGPORT')
+        context.standby_data_dir = master_data_dir
+        context.new_standby_data_dir = '%s_1' % master_data_dir
         context.execute_steps(u"""
          When the master goes down
           And the user runs command "gpactivatestandby -a" from standby master
@@ -68,19 +74,30 @@ def impl(context, segment):
 
     # Fail over (rebalance) to original master/primaries.
     if segment == 'standby':
+        # Re-initialize the standby with a new directory, since
+        # the previous master cannot assume the role of standby
+        # because it does not have the required recover.conf file.
+        context.execute_steps(u"""
+         When the user runs command "gpinitstandby -a -s mdw-1 -S {datadir}" from standby master
+         Then gpinitstandby should return a return code of 0
+         """.format(datadir=context.new_standby_data_dir))
+        os.environ['MASTER_DATA_DIRECTORY'] = context.new_standby_data_dir
         # NOTE: this must be set before gpactivatestandby is called
         if orig_PGHOST is None:
             del os.environ['PGHOST']
         else:
             os.environ['PGHOST'] = orig_PGHOST
+        context.standby_hostname = 'mdw-1'
         context.execute_steps(u"""
-         When running gpinitstandby on host "mdw-2" to create a standby on host "mdw-1"
-         Then gpinitstandby should return a return code of 0
-
          When the master goes down on "mdw-2"
           And the user runs "gpactivatestandby -a"
          Then gpactivatestandby should return a return code of 0
         """)
+
+        context.execute_steps(u"""
+         When the user runs "gpinitstandby -a -s mdw-2 -S {datadir}"
+         Then gpinitstandby should return a return code of 0
+         """.format(datadir=context.new_standby_data_dir))
 
     else: # mirrors
         context.execute_steps(u"""
@@ -93,6 +110,7 @@ def impl(context, segment):
       And the tablespace is valid
       And the other tablespace is valid
       And replication connections can be made from the acting {segment}
+      And all tablespaces are dropped
     """.format(segment=segment))
 
 @then('replication connections can be made from the acting {segment}')
@@ -100,12 +118,12 @@ def impl(context, segment):
     if segment not in ('standby', 'mirrors'):
         raise Exception("invalid segment type")
 
-    def check_replication(primary, mirror):
+    def check_replication(primary, mirror_hostname):
         # Perform a manual replication connection from the mirror host to the
         # primary host. See
         #     https://www.postgresql.org/docs/9.4/protocol-replication.html
         subprocess.check_call([
-            'ssh', '-n', mirror.hostname,
+            'ssh', '-n', mirror_hostname,
             'PGOPTIONS="-c gp_session_role=utility"',
             '{gphome}/bin/psql -h {host} -p {port} "dbname=postgres replication=database" -c "IDENTIFY_SYSTEM;"'.format(
                 gphome=os.environ['GPHOME'],
@@ -117,7 +135,7 @@ def impl(context, segment):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
 
     if segment == 'standby':
-        check_replication(gparray.master, gparray.standbyMaster)
+        check_replication(gparray.master, context.standby_hostname)
     else: # mirrors
         for pair in gparray.segmentPairs:
-            check_replication(pair.primaryDB, pair.mirrorDB)
+            check_replication(pair.primaryDB, pair.mirrorDB.hostname)

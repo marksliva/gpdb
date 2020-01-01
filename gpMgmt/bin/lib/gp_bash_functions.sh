@@ -723,8 +723,24 @@ BUILD_MASTER_PG_HBA_FILE () {
 
 
         # Add replication config
+
+        # todo: do we still need this entry?
         $ECHO "local    replication $USER_NAME         $PG_METHOD" >> ${GP_DIR}/$PG_HBA
+        # Add the samenet replication entry to support local development
         $ECHO "host     replication $USER_NAME         samenet       trust" >> ${GP_DIR}/$PG_HBA
+        if [ $HBA_HOSTNAMES -eq 0 ];then
+            local DISTINCT_ADDRESSES=($($ECHO "${MASTER_IP_ADDRESS_NO_LOOPBACK[@]}" "${STANDBY_IP_ADDRESS_NO_LOOPBACK[@]}" | $TR ' ' '\n' | $SORT -u | $TR '\n' ' '))
+            for ADDR in "${DISTINCT_ADDRESSES[@]}"
+            do
+                CIDRADDR=$(GET_CIDRADDR $ADDR)
+                $ECHO "host     replication $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
+            done
+        else
+            $ECHO "host     replication $USER_NAME         $MASTER_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
+            if [ x"" != x"$STANDBY_HOSTNAME" ];then
+                $ECHO "host     replication $USER_NAME         $STANDBY_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
+            fi
+        fi
         LOG_MSG "[INFO]:-Complete Master $PG_HBA configuration"
         LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }

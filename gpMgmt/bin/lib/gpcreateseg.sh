@@ -229,7 +229,22 @@ CREATE_QES_MIRROR () {
     # on mirror, just copy data from primary as the primary has all the relevant pg_hba.conf content
     # only the entry for replication is added on the primary if mirror hosts are there
     LOG_MSG "[INFO]:-Running pg_basebackup to init mirror on ${GP_HOSTADDRESS} using primary on ${PRIMARY_HOSTADDRESS} ..." 1
-    RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo 'host  replication ${GP_USER} samenet trust' >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload"
+    # Add the samenet replication entry to support local development
+    local PG_HBA_ENTRIES="${PG_HBA_ENTRIES}\nhost  replication ${GP_USER} samenet trust"
+    if [ $HBA_HOSTNAMES -eq 0 ];then
+        local MIRROR_ADDRESSES=($($TRUSTED_SHELL ${GP_HOSTADDRESS} "${GPHOME}"/libexec/ifaddrs --no-loopback))
+        local PRIMARY_ADDRESSES=($($TRUSTED_SHELL ${PRIMARY_HOSTADDRESS} "${GPHOME}"/libexec/ifaddrs --no-loopback))
+        local DISTINCT_ADDRESSES=($($ECHO "${MIRROR_ADDRESSES[@]}" "${PRIMARY_ADDRESSES[@]}" | $TR ' ' '\n' | $SORT -u | $TR '\n' ' '))
+        for ADDR in "${DISTINCT_ADDRESSES[@]}"
+        do
+            CIDR_ADDR=$(GET_CIDRADDR $ADDR)
+            PG_HBA_ENTRIES="${PG_HBA_ENTRIES}\nhost  replication ${GP_USER} ${CIDR_ADDR} trust"
+        done
+    else
+        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}\nhost  replication ${GP_USER} ${GP_HOSTADDRESS} trust"
+        PG_HBA_ENTRIES="${PG_HBA_ENTRIES}\nhost  replication ${GP_USER} ${PRIMARY_HOSTADDRESS} trust"
+    fi
+    RUN_COMMAND_REMOTE ${PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo -e '$PG_HBA_ENTRIES' >> ${PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${PRIMARY_DIR} reload"
     RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup --xlog-method=stream --slot='internal_wal_replication_slot' -R -c fast -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D ${GP_DIR} -h ${PRIMARY_HOSTADDRESS} -p ${PRIMARY_PORT} --target-gp-dbid ${GP_DBID};"
     START_QE "-w"
     RETVAL=$?
