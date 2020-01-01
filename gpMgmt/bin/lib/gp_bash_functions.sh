@@ -1167,8 +1167,7 @@ LOG_FILE=$DEFLOGDIR/${PROG_NAME}_${CUR_DATE}.log
 #Set up OS type for scripts to change command lines
 OS_TYPE=`uname -s|tr '[A-Z]' '[a-z]'`
 case $OS_TYPE in
-	linux ) IPV4_ADDR_LIST_CMD="`findCmdInPath ip` -4 address show"
-		IPV6_ADDR_LIST_CMD="`findCmdInPath ip` -6 address show"
+	linux )
 		PS_TXT="ax"
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"
@@ -1178,8 +1177,7 @@ case $OS_TYPE in
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
-	darwin ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
-		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
+	darwin )
 		PS_TXT="ax"
 		LIB_TYPE="DYLD_LIBRARY_PATH"
 		# Darwin zcat wants to append ".Z" to the end of the file name; use "gunzip -c" instead
@@ -1190,8 +1188,7 @@ case $OS_TYPE in
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
-	freebsd ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
-		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
+	freebsd )
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
@@ -1199,8 +1196,7 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
 		;;
-	openbsd ) IPV4_ADDR_LIST_CMD="ifconfig -a inet"
-		IPV6_ADDR_LIST_CMD="ifconfig -a inet6"
+	openbsd )
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
