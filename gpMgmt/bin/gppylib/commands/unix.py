@@ -578,13 +578,14 @@ class Hostname(Command):
 
 
 class InterfaceAddrs(Command):
-    """
-    Returns a list of network interface IP addresses, both v4 and v6. List does
-    not include loopback or link-local addresses.
-    """
+    """Returns list of interface IP Addresses.  List does not include loopback."""
 
     def __init__(self, name, ctxt=LOCAL, remoteHost=None):
-        cmdStr = '$GPHOME/libexec/ifaddrs --no-loopback'
+        ifconfig = SYSTEM.getIfconfigCmd()
+        grep = findCmdInPath('grep')
+        awk = findCmdInPath('awk')
+        cut = findCmdInPath('cut')
+        cmdStr = '%s|%s "inet "|%s -v "127.0.0"|%s \'{print \$2}\'|%s -d: -f2' % (ifconfig, grep, grep, awk, cut)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
