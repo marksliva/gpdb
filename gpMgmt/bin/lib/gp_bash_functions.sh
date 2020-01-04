@@ -693,38 +693,33 @@ BUILD_MASTER_PG_HBA_FILE () {
         #$ECHO "local    all         all                $PG_METHOD" >> ${GP_DIR}/$PG_HBA
         LOG_MSG "[INFO]:-Setting local host access"
         if [ $HBA_HOSTNAMES -eq 0 ];then
-            $ECHO "host     all         $USER_NAME         127.0.0.1/28    trust" >> ${GP_DIR}/$PG_HBA
-
-            for ADDR in "${MASTER_IP_ADDRESS_ALL[@]}"
-            do
-                # MPP-15889
-                CIDRADDR=$(GET_CIDRADDR $ADDR)
-                $ECHO "host     all         $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
-
-            done
-            for ADDR in "${STANDBY_IP_ADDRESS_ALL[@]}"
+            local DISTINCT_ADDRESSES_WITH_LOOPBACK=$(echo "${MASTER_IP_ADDRESS_WITH_LOOPBACK[@]}" "${STANDBY_IP_ADDRESS_WITH_LOOPBACK[@]}" | uniq)
+            for ADDR in "${DISTINCT_ADDRESSES_WITH_LOOPBACK[@]}"
             do
                 # MPP-15889
                 CIDRADDR=$(GET_CIDRADDR $ADDR)
                 $ECHO "host     all         $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
             done
 
-            # Add all local IPV6 addresses
-            for ADDR in "${MASTER_IPV6_LOCAL_ADDRESS_ALL[@]}"
+            local DISTINCT_ADDRESSES=$(echo "${MASTER_IP_ADDRESS[@]}" "${STANDBY_IP_ADDRESS[@]}" | uniq)
+            for ADDR in "${DISTINCT_ADDRESSES[@]}"
             do
-                # MPP-15889
                 CIDRADDR=$(GET_CIDRADDR $ADDR)
-                $ECHO "host     all         $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
+                $ECHO "host     replication         $USER_NAME         $CIDRADDR       trust" >> ${GP_DIR}/$PG_HBA
             done
         else
             $ECHO "host     all         $USER_NAME         localhost    trust" >> ${GP_DIR}/$PG_HBA
             $ECHO "host     all         $USER_NAME         $MASTER_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
+            $ECHO "host     replication         $USER_NAME         $MASTER_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
+            if [ x"" != x"$STANDBY_HOSTNAME" ];then
+                $ECHO "host     replication         $USER_NAME         $STANDBY_HOSTNAME       trust" >> ${GP_DIR}/$PG_HBA
+            fi
         fi
 
 
+        # todo: do we still need this replication entry?
         # Add replication config
         $ECHO "local    replication $USER_NAME         $PG_METHOD" >> ${GP_DIR}/$PG_HBA
-        $ECHO "host     replication $USER_NAME         samenet       trust" >> ${GP_DIR}/$PG_HBA
         LOG_MSG "[INFO]:-Complete Master $PG_HBA configuration"
         LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
@@ -1167,8 +1162,7 @@ LOG_FILE=$DEFLOGDIR/${PROG_NAME}_${CUR_DATE}.log
 #Set up OS type for scripts to change command lines
 OS_TYPE=`uname -s|tr '[A-Z]' '[a-z]'`
 case $OS_TYPE in
-	linux ) IPV4_ADDR_LIST_CMD="`findCmdInPath ip` -4 address show"
-		IPV6_ADDR_LIST_CMD="`findCmdInPath ip` -6 address show"
+	linux )
 		PS_TXT="ax"
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"
@@ -1178,8 +1172,7 @@ case $OS_TYPE in
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
-	darwin ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
-		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
+	darwin )
 		PS_TXT="ax"
 		LIB_TYPE="DYLD_LIBRARY_PATH"
 		# Darwin zcat wants to append ".Z" to the end of the file name; use "gunzip -c" instead
@@ -1190,8 +1183,7 @@ case $OS_TYPE in
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
 		;;
-	freebsd ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
-		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
+	freebsd )
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
@@ -1199,8 +1191,7 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
 		;;
-	openbsd ) IPV4_ADDR_LIST_CMD="ifconfig -a inet"
-		IPV6_ADDR_LIST_CMD="ifconfig -a inet6"
+	openbsd )
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
