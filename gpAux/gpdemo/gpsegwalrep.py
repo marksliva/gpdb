@@ -96,6 +96,9 @@ class InitMirrors():
         mirror_contentid = segconfig.content
 
         if self.init:
+            # todo: samenet is no longer used, due to the cross-subnet fix.
+            # Instead of samenet, we now specify either the hostname, or add an entry for each IP
+            # address that will be connecting to the DB for replication.
             commands.append("echo 'host  replication  %s  samenet  trust' >> %s/pg_hba.conf" % (user, primary_dir))
             commands.append("pg_ctl -D %s reload" % primary_dir)
 

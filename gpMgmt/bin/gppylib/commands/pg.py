@@ -5,6 +5,7 @@
 
 import os
 import pipes
+import subprocess
 
 from gppylib.gplog import *
 from gppylib.gparray import *
@@ -230,3 +231,19 @@ class PgBaseBackup(Command):
             return ["--slot", replication_slot_name, "--xlog-method", "stream"]
         else:
             return ['--xlog']
+
+class IfAddrs:
+    @staticmethod
+    def get(include_loopback=False, remote_host=None):
+        args = []
+        if remote_host:
+            args.extend(['ssh', remote_host])
+        ifaddrs = '%s/libexec/ifaddrs' % GPHOME
+        args.append(ifaddrs)
+        if not include_loopback:
+            args.append('--no-loopback')
+        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = process.communicate()
+        if err:
+            raise Exception("Command: `{args}` Error: {err}".format(args=' '.join(args), err=str(err)))
+        return out.splitlines()
