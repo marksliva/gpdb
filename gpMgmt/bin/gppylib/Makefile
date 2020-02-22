@@ -10,7 +10,7 @@ $(recurse)
 PROGRAMS= gparray.py gpunit unit2
 
 DATA= __init__.py datetimeutils.py fault_injection.py gp_era.py gpcatalog.py \
-	gphostcache.py gplog.py gpparseopts.py gpresgroup.py gpsubprocess.py \
+	gphostcache.py gplog.py gpparseopts.py gpresgroup.py \
 	gpversion.py heapchecksum.py logfilter.py mainUtils.py parseutils.py \
 	pgconf.py userinput.py utils.py
 

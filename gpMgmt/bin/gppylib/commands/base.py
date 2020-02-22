@@ -29,7 +29,7 @@ import sys
 import time
 
 from gppylib import gplog
-from gppylib import gpsubprocess
+import subprocess
 from pygresql.pg import DB
 
 logger = gplog.get_default_logger()
@@ -449,14 +449,15 @@ class LocalExecutionContext(ExecutionContext):
 
         # executable='/bin/bash' is to ensure the shell is bash.  bash isn't the
         # actual command executed, but the shell that command string runs under.
-        self.proc = gpsubprocess.Popen(cmd.cmdStr, env=None, shell=True,
+        self.proc = subprocess.Popen(cmd.cmdStr, env=None, shell=True,
                                        executable='/bin/bash',
                                        stdin=subprocess.PIPE,
                                        stderr=subprocess.PIPE,
                                        stdout=subprocess.PIPE, close_fds=True)
         cmd.pid = self.proc.pid
         if wait:
-            (rc, stdout_value, stderr_value) = self.proc.communicate2(input=self.stdin)
+            (stdout_value, stderr_value) = self.proc.communicate(input=self.stdin)
+            rc = self.proc.returncode
             self.completed = True
             cmd.set_results(CommandResult(
                 rc, "".join(stdout_value), "".join(stderr_value), self.completed, self.halt))
