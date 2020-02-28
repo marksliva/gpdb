@@ -29,7 +29,6 @@ import sys
 import time
 
 from gppylib import gplog
-import subprocess
 from pygresql.pg import DB
 
 logger = gplog.get_default_logger()

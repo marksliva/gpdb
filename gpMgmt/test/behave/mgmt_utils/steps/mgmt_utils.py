@@ -371,7 +371,8 @@ def impl(context, command):
 @when('the async process finished with a return code of {ret_code}')
 @then('the async process finished with a return code of {ret_code}')
 def impl(context, ret_code):
-    rc, stdout_value, stderr_value = context.asyncproc.communicate2()
+    stdout_value, stderr_value = context.asyncproc.communicate()
+    rc = context.asyncproc.returncode
     if rc != int(ret_code):
         raise Exception("return code of the async proccess didn't match:\n"
                         "rc: %s\n"
