@@ -1438,12 +1438,12 @@ jobs:
 {% if "centos6" in os_types %}
 - name: fips_centos6
   plan:
-  - aggregate:
+  - in_parallel:
     - get: gpdb_src
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
+      passed: [compile_gpdb_centos6]
       trigger: true
     - get: ccp_src
     - get: ccp-image
@@ -1468,7 +1468,24 @@ jobs:
   - task: gpinitsystem
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: test_fips
-    file: gpdb_src/concourse/tasks/test_fips.yml
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: pivotaldata/ccp
+          tag: "7"
+      inputs:
+        - name: ccp_src
+        - name: cluster_env_files
+      run:
+        path: bash
+        args:
+          - -c
+          - |
+            set -ex
+            ccp_src/scripts/setup_ssh_to_cluster.sh
+            ssh -t mdw "bash /home/gpadmin/gpdb_src/concourse/scripts/run_fips_tests.sh"
     on_success:
       <<: *ccp_destroy
   ensure:
@@ -2329,6 +2346,7 @@ jobs:
         - gpexpand
         - check_centos
         - interconnect
+        - fips_centos6
       - get: bin_gpdb_centos6
         trigger: true
         passed:
